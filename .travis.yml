@@ -57,7 +57,7 @@ matrix:
         - cd ..
         - cd www && npm install
         - npm run build
-        - mv ./dist/* ../docs
+        - mv ./dist/* ..
       deploy:
         provider: pages
         skip-cleanup: true
