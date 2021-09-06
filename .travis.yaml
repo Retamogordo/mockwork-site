@@ -34,8 +34,10 @@ cache:
     - /home/travis/.cargo
 
 script:
+  - cd crate-wasm
   - cargo build --verbose --all
   - cargo test --verbose --all
+  - cd ..
 
 matrix:
   allow_failures:
@@ -74,9 +76,10 @@ matrix:
       install:
         - *INSTALL_NODE_VIA_NVM
       script:
+        - cd crate-wasm
         - cargo test --all
         - cargo test --all --target wasm32-unknown-unknown
-
+        - cd ..
 
 notifications:
   email:
