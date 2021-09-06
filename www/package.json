@@ -1,8 +1,8 @@
 {
-  "author": "Victor Gavrish <victor.gavrish@gmail.com>",
-  "name": "create-rust-wasm-worker",
+  "author": "Yury Yukhananov <yury.yukhananov@tutanota.com>",
+  "name": "mockwork-site",
   "version": "0.1.0",
-  "repository": "https://github.com/rustwasm/rust-wasm-worker-template",
+  "repository": "https://github.com/Retamogordo/mockwork-site",
   "license": "Apache-2.0/MIT",
   "scripts": {
     "start": "webpack-dev-server -d",
