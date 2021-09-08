@@ -1,11 +1,10 @@
  # Mockwork
  ## Asynchronous Network Simulator.
+ [Run Demo](https://retamogordo.github.io/mockwork-site)
  ### Introduction
  This program presents a simulator of nodes interconnected by physical media.
  Nodes run a protocol stack that facilitate exchange of data between nodes.
  The code runs on WebAssembly which is loaded to a single Web Worker.
-
-[screenshot](https://github.com/Retamogordo/mockwork/tree/master/docs/Screenshot_mockwork.png)
 
  ### Disclaimer
  This program was written as a part of my effort to learn Rust language.
@@ -82,9 +81,6 @@
  ### Browser compatibility
  I used Firefox 89.0 on Linux while developing and tested it a bit with
  Chromium 93
- 
- ### Rust Programming Practices
- My first thing in Rust, most likely not best practiced.
  
  ### Deployment Problems
  I lack knowledge regarding deployment process, after two days of
