@@ -30,13 +30,13 @@
  
  The line delay is simulated by a timer delay.
  
- Each node run its own event loop in which it listens for Events from line
+ Each node runs its own event loop (two loops, more precisely) in which it listens to Events from line
  and Commands from frontend.
  
  These items - Commands and Events are passed through a duplex pipe where
  protocols reside.
  
- Protocols are entities that receive, recognize, process relevant commands and event
+ Protocols are entities that receive, recognize, process relevant commands and events
  and, possibly, emit futher items until they are consumed on corresponding
  endpoint of the pipe.
  
