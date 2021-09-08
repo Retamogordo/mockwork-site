@@ -5,6 +5,13 @@
  This program presents a simulator of nodes interconnected by physical media.
  Nodes run a protocol stack that facilitate exchange of data between nodes.
  The code runs on WebAssembly which is loaded to a single Web Worker.
+ 
+ ### Building and running locally
+ - clone the repo
+ - in /www folder run npm install
+ - run npm run start (or npm run build to bundle to www/dist)
+ - change dir to /crate-wasm and run wasm-pack build 
+ - access in a browser from localhost:8080
 
  ### Disclaimer
  This program was written as a part of my effort to learn Rust language.
