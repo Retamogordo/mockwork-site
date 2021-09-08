@@ -160,7 +160,7 @@ impl LayerPipeItem {
 
     pub fn to_lower(&mut self) {
         match self {
-            Self::SomeCommand(_, PhysicalLayer(cmd)) => *self = Self::None,
+            Self::SomeCommand(_, PhysicalLayer(_)) => *self = Self::None,
             Self::SomeCommand(lid, FirstLayer(cmd)) => 
                 *self = Self::SomeCommand(*lid, PhysicalLayer(cmd.take().into())),
             Self::SomeCommand(lid, SecondLayer(cmd)) => 
@@ -171,7 +171,7 @@ impl LayerPipeItem {
 
     pub fn to_upper(&mut self) {
         match self {
-            Self::SomeEvent(lid, LayerEvent::SecondLayer(ev)) => *self = Self::None,
+            Self::SomeEvent(_, LayerEvent::SecondLayer(_)) => *self = Self::None,
             Self::SomeEvent(lid, LayerEvent::FirstLayer(ev)) => 
                 *self = Self::SomeEvent(*lid, LayerEvent::SecondLayer(ev.take().into())),
             Self::SomeEvent(lid, LayerEvent::PhysicalLayer(ev)) => 

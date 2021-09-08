@@ -1,13 +1,106 @@
+//! # Mockwork
+//! ## Asynchronous Network Simulator.
+//! ### Introduction
+//! This program presents a simulator of nodes interconnected by physical media.
+//! Nodes run a protocol stack that facilitate exchange of data between nodes.
+//! The code runs on WebAssembly which is loaded to a single Web Worker.
+//!
+//![screenshot](https://github.com/Retamogordo/mockwork/tree/master/docs/Screenshot_mockwork.png)
+//!
+//! ### Disclaimer
+//! This program was written as a part of my effort to learn Rust language.
+//! The design of this network is not based on any existing real network implementation.
+//! All terms used here like socket, peer, stream, protocol etc etc should be
+//! taken in their broad and vague sense.
+//! Although somewhat complex, this program does not pursuit any practical utility but eat up your CPU when
+//! running :)
+//! 
+//! ### Brief introduction of functioning
+//! 
+//! Nodes are connected by duplex lines which are modeled by only a couple of
+//! parameters: propagation delay and noise level.
+//! 
+//! The bandwidth is limited naturally by JS event loop :)
+//! 
+//! The line delay is simulated by a timer delay.
+//! 
+//! Each node run its own event loop in which it listens for Events from line
+//! and Commands from frontend.
+//! 
+//! These items - Commands and Events are passed through a duplex pipe where
+//! protocols reside.
+//! 
+//! Protocols are entities that receive, recognize, process relevant commands and event
+//! and, possibly, emit futher items until they are consumed on corresponding
+//! endpoint of the pipe.
+//! 
+//! For now protocols are layered into three layers: "Physical", "First" and "Second".
+//! Rusts type system favors natural firewalling of pipe items in such a way that
+//! each item must be expicitly converted to the adjacent layer item in order
+//! to be eligible to propagate.
+//! 
+//! Each protocol has a header which wraps a message to be transmitted, on the other
+//! line endpoint the headers are stripped off as long as the message bubbles up in 
+//! the protocol pipe.
+//! 
+//! At first nodes are unaware of their mates, the only thing they can do 
+//! is to send a message online using physical layer transmit.
+//! There is a protocol that broadcasts requests for address map building upon
+//! receiving acks from other nodes.
+//! There is a protocol for channel establishing on a line between two adjacent
+//! nodes, and this channel can serve as a joint for a longer higher layer channel
+//! between two arbitrary nodes.
+//! On a "frontend" level a concept of stream is introduced (does not implement
+//! a formal Rusts stream interface). 
+//! Each physical line can serve for data transmitting over multiple logical
+//! streams.
+//! Streams lazily expire so they can be garbage collected after line failure.
+//! The protocol stack is somehow scalable, one can implement a new protocol
+//! introducing events and commands along with relevant business logic and hooking
+//! it to the protocol stack.
+//! 
+//! ### User Interface
+//! is written in plain Javascript and utilizes [Cytoscape](https://cytoscape.org) for network visualization.
+//! WebAssemly code runs network simulation event loops in asynchronous fashion
+//! on separate single Web Worker.
+//! When the network is actively doing something, Web Worker polls its shared state
+//! to postmessage it to UI thread and present some indication on network activity.
+//!
+//! ### Technical Issues
+//! Line delay are simulated by a standard (asynchronously awaited) delays which
+//! present a small but constant time drift which, by cumulative effect leads to a
+//! significant time divergence very quickly. 
+//! So there is a scheduling mechanism aiming to solve this issue, which usually
+//! works fine but in theory (and in practice) causes some messages to be
+//! sent before time.
+//! This is a CPU greedy program, after all there are a plenty of event loops
+//! on top of JS runtime, and while it is UI responsive, it turns to be tricky to achieve
+//! internal responsiveness ( I consider I failed to get to a satisfactory solution).
+//! I suspect my protocol implementation is far from being optimal and represents
+//! a serious bottleneck for the whole story.
+//! 
+//! ### Browser compatibility
+//! I used Firefox 89.0 on Linux while developing and tested it a bit with
+//! Chromium 93
+//! 
+//! ### Rust Programming Practices
+//! My first thing in Rust, most likely not best practiced.
+//! 
+//! ### Deployment Problems
+//! I lack knowledge regarding deployment process, after two days of
+//! trying to adopt a foreign very simple travis.yml I abandoned it 
+//! for deploying it just brutally.
+//! 
+//! ### Acknowledgements
+//! to Victor Gavrish for his 
+//! [rust-wasm-worker-template](https://github.com/VictorGavrish/rust-wasm-worker-template)
+//! 
 mod protocol_stack;
 mod pipe;
 mod target_dependant;
 mod utils;
 pub mod mock_work;
 mod rebounce_test;
-pub use crate::protocol_stack::node;
-pub use crate::protocol_stack::node::node_services;
-mod output_box;
-
 mod cy_structs;
 
 use crate::protocol_stack::{ServiceToken};
@@ -23,7 +116,6 @@ use console_error_panic_hook;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures;
 
-
 use core::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -32,7 +124,6 @@ use async_std::task:: {block_on};
 use colored::*;
 use rand::thread_rng;
 use rand::Rng;
-
 
 use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -43,7 +134,6 @@ use crate::mock_work::{MockWork, MockWorkEntry};
 use crate::cy_structs::{CyMockWorkState, CyNodeState};
 use std::collections::{HashSet, HashMap};
 use once_cell::sync::OnceCell;
-
 
 struct MockWorkBuilder(
     RwLock<Option<MockWork>>,
@@ -62,14 +152,8 @@ lazy_static!(
         = Mutex::new(HashMap::new());
     static ref CANCEL_HANDLES: Mutex<Vec<crate::target_dependant::CancellableRun>> 
         = Mutex::new(Vec::new());
-//    static ref INJECTED_PEERS: Mutex<HashSet<(NodeAddress, NodeAddress)>> 
-//        = Mutex::new(HashSet::new());
-    static ref FAILED_PEERS: Arc<Mutex<std::collections::HashMap<(NodeAddress, NodeAddress), usize>>>
-        = Arc::new(Mutex::new(std::collections::HashMap::new()));
-        
     );
 
-//    static INSTANCE: OnceCell<MockWork> = OnceCell::new();
 static INSTANCE: OnceCell<MockWorkBuilder> = OnceCell::new();
 
 impl MockWorkBuilder {
@@ -152,12 +236,11 @@ impl MockWorkBuilder {
 
             mw.run().await;
 
-    //       mw.run();
-            log::info!("Mockwork running");
+            log::debug!("Mockwork running");
             *guard = Some(mw);
             return true;
         }
-        log::info!("Mockwork creation failure");
+        output_box("Mockwork creation failure\n");
         false
     }
 
@@ -169,8 +252,7 @@ impl MockWorkBuilder {
         }
 
         if let Ok(mut guard) = self.0.try_write() {
-            if let Some(mw) = (*guard).take() {
-            }
+            (*guard).take();
         }
     }
 }
@@ -242,15 +324,7 @@ pub async fn load_instance(
         }
     }
     mw_json
- //   "".to_string()
-
-/*
-    if let Ok(_) = INSTANCE.set(mwb) {
-        INSTANCE.get().unwrap().to_json()
-    } else {
-        "".to_string()
-    }*/
-}
+ }
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
@@ -270,7 +344,7 @@ pub fn peer_channel_test(src_addr_json: String, dest_addr_json: String) {
             src_addr,
             dest_addr,
             Arc::clone(&CY_MOCK_WORK_SHARED_STATE),
-            1000,
+            None,
             100
         )
     );
@@ -283,8 +357,6 @@ pub fn random_peer_channel_test() {
     crate::target_dependant::spawn(
         infinite_run_inner(
             Arc::clone(&INFINITE_RUNNING), 
-            NodeAddress::default(),
-            NodeAddress::default(),
             Arc::clone(&CY_MOCK_WORK_SHARED_STATE),
             1000,
             100
@@ -295,7 +367,6 @@ pub fn random_peer_channel_test() {
 fn get_peer() -> Option<(NodeAddress, NodeAddress)> {
     let mw = (**INSTANCE.get().unwrap()).try_read();
     if mw.is_err() {
-//        panic!();
         return None;
     }
     let tmp = mw.unwrap();
@@ -308,14 +379,20 @@ fn get_peer() -> Option<(NodeAddress, NodeAddress)> {
         let ind: usize = thread_rng().gen_range(0..len);
         if let Some(src_addr) = mw.node_addresses().nth(ind) {
             let src_locked = mw.node(&src_addr).unwrap().lock().unwrap();
+            if !src_locked.is_connected() {
+                continue;
+            }
             
             let len = src_locked.nodes_online().len();
             if len > 0 {
                 if let Some(dest_addr) = src_locked.nodes_online().keys()
                     .nth(thread_rng().gen_range(0..len)) {
                     if *dest_addr == NodeAddress::default() { 
-                        log::error!("dest_addr == 0");
                         return None;
+                    }
+
+                    if !mw.node(&dest_addr).unwrap().lock().unwrap().is_connected() {
+                        continue;
                     }
                     return Some((*src_addr, *dest_addr));
                 }
@@ -345,7 +422,7 @@ async fn peer_channel_run_inner(
         src: NodeAddress,
         dest: NodeAddress,
         shared_state: Arc<Mutex<CyMockWorkState>>,  
-        streams_exp_delay: u64,  
+        streams_exp_delay: Option<u64>,  
         map_req_exp_delay: u64,
         
     ) {
@@ -358,18 +435,16 @@ async fn peer_channel_run_inner(
                 "0123456789".to_string(),
                 streams_exp_delay,
                 map_req_exp_delay,
-                Arc::clone(&FAILED_PEERS),
+                None
             );   
             cancel_handles.push(cancel_handle);
         }
-    
-        if running.compare_and_swap(false, true, Ordering::Acquire) {
-            log::warn!("Can run only once at a time");
-            return;
-        }    
-
-    //    let mw = INSTANCE.get().unwrap();
-    
+        #[allow(deprecated)] {
+            if running.compare_and_swap(false, true, Ordering::Acquire) {
+                log::debug!("Can run only once at a time");
+                return;
+            }    
+        }
         while running.load(Ordering::Relaxed) {
             crate::target_dependant::run_on_next_js_tick().await;
     
@@ -380,12 +455,6 @@ async fn peer_channel_run_inner(
             } else { break; }
         }
 
-//        if let Ok(mut peers) = INJECTED_PEERS.try_lock() {
-//            peers.clear();
-//        }
-        if let Ok(mut failed_peers) = FAILED_PEERS.try_lock() {
-            failed_peers.clear();
-        }
         if let Ok(mut cancel_handles) = CANCEL_HANDLES.try_lock() {
             while let Some(h) = cancel_handles.pop() {
                 h.cancel().await;
@@ -396,109 +465,69 @@ async fn peer_channel_run_inner(
 
         running.store(false, Ordering::Relaxed);
         
-        log::info!("mockwork running loop is over");    
+        log::debug!("mockwork running loop is over");    
     }
    
 
 async fn infinite_run_inner(
     running: Arc<AtomicBool>,
-    src: NodeAddress,
-    dest: NodeAddress,
     shared_state: Arc<Mutex<CyMockWorkState>>,  
     streams_exp_delay: u64,  
     map_req_exp_delay: u64,
     
 ) {
-//    if let Ok(mut peers) = INJECTED_PEERS.try_lock() {
-//        (*peers).insert((src, dest));
-//    }
-
-    if running.compare_and_swap(false, true, Ordering::Acquire) {
-        log::warn!("Can run only once at a time");
-        return;
+    #[allow(deprecated)] {
+        if running.compare_and_swap(false, true, Ordering::Acquire) {
+            log::debug!("Can run only once at a time");
+            return;
+        }
     }
 
     let mut cancel_handles = vec![];
-    let mut i = 0;
     while running.load(Ordering::Relaxed) {
 
         crate::target_dependant::run_on_next_js_tick().await;
 
+        if let Ok(shared_state_locked) = shared_state.try_lock() {
+            if shared_state_locked.sessions_running >= shared_state_locked.running_sessions_limit { 
+                drop(shared_state_locked);
+                crate::target_dependant::delay(instant::Duration::from_millis(199)).await;
+                continue; 
+            }
+        } else { 
+            break;
+        }
         if let Some((src, dest)) = get_peer() {
-            if i > 0 {
-    //           log::warn!("infinite loop is over");
-//               crate::target_dependant::delay(instant::Duration::from_millis(14000)).await;
-//                  break;
-            }
-
-            if let Ok(shared_state_locked) = shared_state.try_lock() {
-                if shared_state_locked.sessions_running >= shared_state_locked.running_sessions_limit { 
-                    drop(shared_state_locked);
-                    crate::target_dependant::delay(instant::Duration::from_millis(199)).await;
-                    continue; 
-                }
-//                log::info!("running infinite, streams: {}", shared_state_locked.total_streams);
-            } else { 
-                log::error!("shared_state_locked not locked");
-                break;
-            }
-            i+=1;
-
             let cancel_handle = crate::rebounce_test::peer_channel_or_search(
                 &**INSTANCE.get().unwrap(),
                 Arc::clone(&CY_MOCK_WORK_SHARED_STATE),
                 src,
                 dest,
                 "0123456789".to_string(),
-                streams_exp_delay,
+                Some(streams_exp_delay),
                 map_req_exp_delay,
-                Arc::clone(&FAILED_PEERS),
+                Some(50),
             );   
             cancel_handles.push(cancel_handle);
-            /*
-            if let Ok(mut failed_peers) = FAILED_PEERS.try_lock() {
-                (*failed_peers).iter().for_each(|(fp, &times)| {
-                    if times >= 3 { 
-                        if let Ok(mut peers) = INJECTED_PEERS.try_lock() {
-                            peers.remove(fp);
-                        }
-                    }
-                });
-                failed_peers.retain(|_, times| *times < 3); 
-            }*/
-        } else {
-            log::error!("no peer");
-            break;
-//            crate::target_dependant::run_on_next_js_tick().await;
-        }        
+            output_box(&format!("peer ({}, {}) established\n", src, dest));
+        }
     }
 
     while let Some(h) = cancel_handles.pop() {
         h.cancel().await;
-    }
-
-//    if let Ok(mut peers) = INJECTED_PEERS.try_lock() {
-//        peers.clear();
-//    }
-    if let Ok(mut failed_peers) = FAILED_PEERS.try_lock() {
-        failed_peers.clear();
     }
     
     cool_down(shared_state).await;
 
     running.store(false, Ordering::Relaxed);
     
-    log::info!("mockwork running loop is over");    
+    log::debug!("mockwork running loop is over");    
 }
-
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn stop_infinite_run() {
     (*INFINITE_RUNNING).store(false, Ordering::Relaxed);
-//    if let Ok(mut shared_state_locked) = CY_MOCK_WORK_SHARED_STATE.try_lock() {
-//        shared_state_locked.loop_stopped = true;
-//    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -515,7 +544,7 @@ pub fn set_loop_cycle_gap(gap: u32) {
 #[wasm_bindgen]
 pub fn set_max_running_sessions_num(running_sessions_limit: usize) {
     if let Ok(mut state_locked) = CY_MOCK_WORK_SHARED_STATE.try_lock() {
-        log::error!("running_sessions_limit = {}", running_sessions_limit);
+        log::debug!("running_sessions_limit = {}", running_sessions_limit);
         state_locked.running_sessions_limit = running_sessions_limit;
     }
 }
@@ -535,38 +564,26 @@ pub fn poll_mock_work() -> String {
 }
 
 fn poll_mock_work_inner() {
-//fn poll_mock_work_inner(mw: &MockWork) {
-//    let mw = mw.lock().unwrap();
     if let Ok(mw) = (**INSTANCE.get().unwrap()).try_read() {
         let mw = mw.as_ref().unwrap();
 
         let mut state_locked = CY_MOCK_WORK_SHARED_STATE.lock().unwrap();
-
-//        state_locked.traffic_samples.values_mut().for_each(|sample| *sample = (0, 0));
         
         mw.nodes().for_each(|node| {
             let node_locked = node.lock().unwrap();
-                
-/*            node_locked.traffic_samples()
-                .into_iter()
-                .for_each(|(line_id, sample)| {
-                    state_locked.traffic_samples
-                        .entry(line_id)
-                        .and_modify(|s| {(*s).0 += sample.0; (*s).1 += sample.1;});
-            });
-*/
+
             state_locked.active_nodes_map
-            .insert(node_locked.addr(), 
-                CyNodeState { 
-                    connected: node_locked.is_connected(), 
-                    neighbours:
-                        node_locked
-                            .nodes_online()
-                            .keys()
-                            .map(|node_addr| *node_addr)
-                            .collect()
-                    }
-            );
+                .insert(node_locked.addr(), 
+                    CyNodeState { 
+                        connected: node_locked.is_connected(), 
+                        neighbours:
+                            node_locked
+                                .nodes_online()
+                                .keys()
+                                .map(|node_addr| *node_addr)
+                                .collect()
+                        }
+                );
             state_locked.js_loop_cycle_gap = mw.js_loop_cycle_gap.load(std::sync::atomic::Ordering::Relaxed);
             state_locked.current_transmit_info = mw.current_transmit_info();
             state_locked.mw_status = mw.status();
@@ -578,7 +595,6 @@ fn poll_mock_work_inner() {
 #[wasm_bindgen]
 pub fn get_node_address_map(n: String) -> String {
     let src = NodeAddress::from(n);
-//    let mw = INSTANCE.get().unwrap();
     if let Ok(mw) = (**INSTANCE.get().unwrap()).try_read() {
         let mw = mw.as_ref().unwrap();
         let node_locked = mw.node(&src).unwrap().lock().unwrap();
@@ -586,7 +602,6 @@ pub fn get_node_address_map(n: String) -> String {
         let nodes_online = node_locked.nodes_online();
 
         let nodes_json = serde_json::to_string(&nodes_online).unwrap();
-//        let nodes_json = "".to_string();
         nodes_json   
     } else { "".to_string() }
 }
@@ -594,12 +609,17 @@ pub fn get_node_address_map(n: String) -> String {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn toggle_node_connection(n: String) {
-    let node = NodeAddress::from(n);
+    let addr = NodeAddress::from(n);
 
     crate::target_dependant::spawn( async move {
         if let Ok(mw) = (**INSTANCE.get().unwrap()).try_read() {
             let mw = mw.as_ref().unwrap();
-            mw.toggle_node_connection(&node).await;
+            mw.toggle_node_connection(&addr).await;
+
+            if let Some(node) = mw.node(&addr) {
+                output_box(&format!("node {} status: {}\n", addr, 
+                    node.lock().unwrap().status()));
+            }
         }
     });
 }
@@ -653,19 +673,10 @@ pub fn network_refresh_address_map(seeds: usize, map_request_exp_delay: u64) {
         if let Ok(mw) = (**INSTANCE.get().unwrap()).try_read() {
             let mw = mw.as_ref().unwrap();
 
-            let (_, exp_delay) = mw.line_delay_range();
-//            map_request_exp_delay = ((2.2f64*(exp_delay as f64)) as u64);
-
             let len = mw.node_count();
             if len == 0 { return; }
-//            let n = len/5 + 1;
-
-//            for addr in mw.node_addresses() {
-            let mut rng = thread_rng();
             for i in 0..core::cmp::min(seeds, len) {
-                let n_ind1: usize = rng.gen_range(0..len);
                 if let Some(addr) = mw.node_addresses().nth(i) {
-//                    log::info!("Addr map Running for {}", addr);
                     output_box(&format!("address map seed {}\n", addr) );
 
                     refresh_address_map_inner(&addr, &NodeAddress::ANY, map_request_exp_delay)
@@ -692,63 +703,6 @@ pub fn stop_refreshing_address_map() {
                         SecondLayerCommand::DropService(service_token)
                     )); 
             }
-    
         }
     }   
-
-}
-
-
-/*
-fn line_stats(addr: &NodeAddress, line_id: LineId, batch: usize) {
-    let mut n = INSTANCE.get().unwrap()
-        .lock().unwrap().node(addr).unwrap().lock().unwrap();
-
-    let line_stats_handle = n.line_stats_handle(line_id, batch);
-   
-    let line_stats_handle = 
-        match line_stats_handle {
-            Ok(handle) => handle,
-            Err(err) => {
-                log::error!("Error: {}", err);
-                return;
-            }
-        };
-
-    log::info!("after got handle");
-
-    let handle = target_dependant::spawn( async move {
-//            wasm_bindgen_futures::spawn_local( async move {
-        let res = line_stats_handle.run_once().await;
-        
-        match res {
-            Ok(stats) => {
-                log::info!("{}", stats);
-            },
-            Err(err) => log::error!("{}", err),
-        } 
-    });
-    block_on_target!(handle.handle());
-                
-}
-*/
-    
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[async_std::test]
-    async fn run_all_sync() {
-        init();
-
-    }
-
-//    #[async_std::test]
-    async fn run_all() {
-        simple_logger::SimpleLogger::new()
-        .with_level(log::LevelFilter::Debug)
-        .init().unwrap();
-
-    }
-
 }

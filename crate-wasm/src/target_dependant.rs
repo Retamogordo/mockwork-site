@@ -22,9 +22,9 @@ type JoinHandleType<T> = futures::future::Ready<T>;
 pub struct TargetDependantJoinHandle<T>(JoinHandleType<T>);
 
 impl<T> TargetDependantJoinHandle<T> {
-    pub fn handle(self) -> JoinHandleType<T> {
+/*    pub fn handle(self) -> JoinHandleType<T> {
         self.0
-    }
+    }*/
 }
   
 #[cfg(not(target_arch = "wasm32"))]
@@ -106,16 +106,13 @@ where
         let cancel_signal = cancellable.cancel_signal.1.take().unwrap();
         let done_tx = cancellable.done_response.0.take().unwrap();
 
-//        wasm_bindgen_futures::spawn_local( 
         self::spawn(
             async move {
 
             cancellable_run(f, cancel_signal).await;
             
-//            if let Ok(_) = done_tx.send(()) {
             let _ = done_tx.send(());
             on_done();
-//            }
         });
         cancellable
 }
@@ -127,12 +124,12 @@ pub fn spawn_default_failed_test() -> TargetDependantJoinHandle<bool> {
     spawn(async { false })
 }
 
-
+/*
 #[cfg(target_arch = "wasm32")]
 pub fn spawn_default_failed_test() -> TargetDependantJoinHandle<()> {
     spawn(async { () })
 }
-
+*/
 #[cfg(not(target_arch = "wasm32"))]
 pub fn delay(d: core::time::Duration) -> futures_timer::Delay {
     futures_timer::Delay::new(d) 

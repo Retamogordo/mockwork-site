@@ -6,7 +6,6 @@ use futures::channel::mpsc::{unbounded, UnboundedSender, UnboundedReceiver };
 use futures::channel::{oneshot};
 //#[cfg(not(target_arch = "wasm32"))]
 //use async_std::task:: {block_on};
-//use async_std::stream::StreamExt;
 use futures::StreamExt;
 use std::sync::{Arc, RwLock};
 
@@ -18,9 +17,8 @@ use core::time::{Duration};
 use futures::{pin_mut, select, FutureExt};
 use serde::{Serialize};
 
-use super::{ ChannelToken, ChannelType, TimerOwnerToken};
+use super::{ ChannelToken, TimerOwnerToken};
 use self::stream::{StreamHandle, AcquireStreamHandle, IncomingHandle, ServiceManageHandle, service_stream, ChannelError};
-//use self::node_services::{*};
 use self::socket::{*};
 use super::second_layer::{*};
 use super::physical_layer::{*};
@@ -29,9 +27,9 @@ use super::line::*;
 //use crate::target_dependant::{TargetDependantJoinHandle};
 use crate::protocol_stack::{Chunk};
 use crate::mock_work::{ScheduledTransmit};
-use crate::{warn_on_error};
+//use crate::{warn_on_error};
 use crate::protocol_stack::layer_pipe_item::{*};
-#[cfg(target_arch = "wasm32")]
+//#[cfg(target_arch = "wasm32")]
 use crate::target_dependant::{CancellableRun, spawn_cancellable};
 
 pub type IncomingStreamSender = UnboundedSender<StreamHandle>;
@@ -57,7 +55,7 @@ enum NodeChannelError {
 }
 
 #[derive(Display)]
-enum NodeStatus {
+pub(crate) enum NodeStatus {
 	Connected = 1,
 	Connecting,
 	Suspending,
@@ -211,8 +209,7 @@ impl Node {
 				self.status.store(NodeStatus::Connecting as usize, Ordering::Relaxed);
 				self.connect_inner().await;
 			},
-			_ => () //panic!("NodeStatus: NOT suspended, status: {}",
-			//self.status.load(Ordering::Relaxed)),
+			_ => () 
 		}
 	}
 		
@@ -229,14 +226,11 @@ impl Node {
 	}
 
 	pub async fn connect(&mut self) -> bool {
-//		log::info!("{} in connect inner stauts {}", self.addr, 
-//			NodeStatus::from(self.status.load(Ordering::Relaxed)));
-
 		match self.status.load(Ordering::Relaxed).into() {
 			NodeStatus::Disconnected => {
 				self.status.store(NodeStatus::Connecting as usize, Ordering::Relaxed);
 				self.connect_inner().await;
-				log::info!("after connect inner");
+				log::debug!("after connect inner");
 				true
 			},
 			_ => false,
@@ -314,7 +308,7 @@ impl Node {
 							=> status.store(NodeStatus::Suspended as usize, Ordering::Relaxed),
 						_ => (),
 					}
-					log::warn!(">>>>>>>>> {} agent_event_loop over, node status: {}", addr, 
+					log::debug!(">>>>>>>>> {} agent_event_loop over, node status: {}", addr, 
 						NodeStatus::from(status.load(Ordering::Relaxed)));
 					let _ = agent_event_loop_join_handle_tx.send(());
 				} )
@@ -336,7 +330,7 @@ impl Node {
 				),
 				move || { 
 					agent_event_loop_cancel_handle.take();
-					log::warn!("-------node_frontend_event_loop over") 
+					log::debug!("-------node_frontend_event_loop over") 
 				})
 			);
 
@@ -355,13 +349,13 @@ impl Node {
 			self.status.store(NodeStatus::Connected as usize, Ordering::Relaxed);
 		}
 	}
-		
+	#[allow(dead_code)]	
 	fn toggle_line_connection(&mut self, line_id: &LineId, connect: bool) {
 		match self.status.load(Ordering::Relaxed).into() {
 			NodeStatus::Connected => {
 				if let Some(_) = self.socket_profiles().iter()
 					.find(|&sp| *sp.id.as_val_ref() == *line_id) {
-						log::info!("node {} connecting line {}", self.addr, line_id);
+						log::debug!("node {} connecting line {}", self.addr, line_id);
 						let _res = 
 							self.control_cmd_tx.as_mut().unwrap().unbounded_send(
 								if connect { ControlCommand::ConnectLine(*line_id) }
@@ -382,6 +376,10 @@ impl Node {
 			NodeStatus::Suspended => true,
 			_ => false,
 		}
+	}
+
+	pub(crate) fn status(&self) -> NodeStatus {
+		NodeStatus::from(self.status.load(Ordering::Relaxed))
 	}
 
 	pub fn command(&mut self, cmd: NodeCommand) -> Result<(), SocketError> {
@@ -432,7 +430,7 @@ impl Node {
 impl Drop for Node {
 	fn drop(&mut self) {
 //		self.shutdown();
-		log::error!("Node {} dropped", self.addr);
+		log::debug!("Node {} dropped", self.addr);
 	}
 }
 
@@ -492,16 +490,17 @@ macro_rules! send_them_on_streams {
 		}
 		while let Some(item) = $node_state_handle.events.pop() {
 			match item {
-				LayerPipeItem::SomeEvent(lid, event) =>
-					warn_on_error!(
-						$node_event_tx.unbounded_send(NodeEvent(lid, event.into()))
+				LayerPipeItem::SomeEvent(lid, event) => {
+//					warn_on_error!(
+					let _ = $node_event_tx.unbounded_send(NodeEvent(lid, event.into()))
 						.map_err(|err| 
 							if err.is_full() {
 								NodeChannelError::EventStreamFull(err.into_inner())
 							} else {
 								NodeChannelError::EventStreamDisconnected(err.into_inner())
 							}
-					)),
+					);},
+				//),
 				_ => (),
 			}
 		}
@@ -511,7 +510,9 @@ macro_rules! send_them_on_streams {
 async fn start_timer(timer_tx: TimerSender, line_id: LineId, token: TimerOwnerToken) {
 	crate::target_dependant::delay(token.delay()).await;
 
-	warn_on_error!(timer_tx.unbounded_send((line_id, token))); 
+//	warn_on_error!(
+	let _ = timer_tx.unbounded_send((line_id, token));
+//	); 
 }
 
 async fn agent_event_loop(
@@ -651,8 +652,6 @@ async fn agent_event_loop(
 								&mut node_state_handle.events
 							);
 						}
-		
-
 					} 
 					else if line_id == LineId::default() {
 						let ev = NodeEvent(line_id, SecondLayerEvent::TimerFinished(token));
@@ -698,22 +697,18 @@ async fn node_frontend_event_loop(
 	js_loop_cycle_gap: Arc<AtomicU32>,
 	started_tx: oneshot::Sender<()>,
 )  {
-    const SERVICE_ACTIVATION_TOLERANCE_MILLIS: u128 = 10000;
+//    const SERVICE_ACTIVATION_TOLERANCE_MILLIS: u128 = 10000;
     let mut stream_data_senders: HashMap<ChannelToken, ServiceManageHandle>
 									= HashMap::new();
 
 	let mut prev_js_tick = instant::Instant::now();
-	let mut n = 0;
 
 	if started_tx.send(()).is_err() { return; }
-
 //	log::info!("node {} reconnected frontend", node_addr);
 //	let mut expired_streams_collector_delay = None;
 
 	loop {
 		let js_loop_cycle_gap = js_loop_cycle_gap.load(Ordering::Relaxed);
-		n += 1;
-//		if n > 100* js_loop_cycle_gap && 
 
 		let service_manager_task = service_manager_rx.next().fuse();
 		let event_task = event_rx.next().fuse();	
@@ -767,7 +762,7 @@ async fn node_frontend_event_loop(
 						SecondLayerEvent::ServiceStarted(service_token) => {
 							let stream_data_tx = stream_data_senders.get_mut(&service_token);
 			
-							log::warn!("Node {}: event: {} from line {}, token {}", 
+							log::debug!("Node {}: event: {} from line {}, token {}", 
 								node_addr, "service started", line_id, service_token);
 
 							if let Some(service_manage_handle) = stream_data_tx {
@@ -822,7 +817,7 @@ async fn node_frontend_event_loop(
 				//			if channel_token.channel_type == ChannelType::Data &&
 							if !stream_data_senders.contains_key(&channel_token) {	
 								
-								log::info!("\t\tCalling service_stream from {} IncomingPeerChannel {}", node_addr, channel_token);
+								log::debug!("\t\tCalling service_stream from {} IncomingPeerChannel {}", node_addr, channel_token);
 								let (acq_stream_handle, mut service_manage_handle) 
 									= service_stream(node_addr, 
 										src_addr,
@@ -874,7 +869,7 @@ async fn node_frontend_event_loop(
 					}
 				} 
 				else {
-					log::info!("break on None event");
+					log::debug!("break on None event");
 					break; // break on agent's shutdown
 				}
 			},
@@ -898,15 +893,13 @@ async fn node_frontend_event_loop(
 		if prev_js_tick.elapsed().as_millis() >= js_loop_cycle_gap as u128 {
 			crate::target_dependant::run_on_next_js_tick().await;
 			prev_js_tick = instant::Instant::now();
-			n = 0;
 		}
 
     }
 
-	log::warn!("Node {}: AFTER FRONTEND LOOP", node_addr);
+	log::debug!("Node {}: AFTER FRONTEND LOOP", node_addr);
 }
 
-//#[derive(Clone)]
 struct NodeStateHandle {
 	lines: Arc<Vec<LineId>>,
 	address_map: Arc<RwLock<HashMap<NodeAddress, AddressMapEntry>>>,

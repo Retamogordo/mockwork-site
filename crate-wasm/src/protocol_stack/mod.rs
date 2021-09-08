@@ -114,15 +114,13 @@ pub enum ChannelType {
 #[derive(Clone, Copy, Eq)]
 pub struct ChannelToken {
 	id: usize,
+	#[allow(dead_code)]
 	channel_type: ChannelType,
-//	starts: Option<SystemTime>,
 	starts: Instant,
 	expires: Option<Duration>,
 }
 
 impl ChannelToken {
-//	pub const ID_NAME: &'static str = "CHANNEL_TOKEN_ID";
-
 	pub fn durable(duration: Duration, channel_type: ChannelType) -> Self {
 		Self {
 			id: Self::get_static_id(),
@@ -162,10 +160,10 @@ impl ChannelToken {
 		} else { false }
 	}
 	pub fn touch(&mut self) -> bool {
-//		if !self.expired() {
+		if !self.expired() {
 			self.starts = Instant::now();
 			true
-//		} else { false }
+		} else { false }
 	}
 	pub fn expires(&self) -> Option<Duration> {
 		self.expires

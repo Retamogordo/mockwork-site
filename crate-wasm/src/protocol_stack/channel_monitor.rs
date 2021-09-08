@@ -269,7 +269,7 @@ impl ChannelMonitor {
     }
 
     fn on_too_many_channels(&mut self, channel_token: ChannelToken, shared_alloc: &mut SharedPipeAlloc<LayerPipeItem>) {
-        log::error!("TOO MANY CHANNELS: {} on {}", self.total_channels(), self.node_addr);
+        log::debug!("TOO MANY CHANNELS: {} on {}", self.total_channels(), self.node_addr);
 //        shared_alloc.clear();
         shared_alloc.push(
             FirstLayerEvent::TooManyChannels(channel_token, self.total_channels()).wrap().into()
@@ -283,7 +283,7 @@ impl EventTarget<LayerPipeItem> for ChannelMonitor {
         match shared_alloc.current() {
             LayerPipeItem::SomeEvent(_, LayerEvent::FirstLayer(event)) =>
                 match event {
-                    FirstLayerEvent::ChunkReceived(chunk, at) => {
+                    FirstLayerEvent::ChunkReceived(chunk, _at) => {
                         let hdr: &FirstLayerHeader = chunk.header().into();
                         self.on_received(hdr.clone(), shared_alloc);
                     },

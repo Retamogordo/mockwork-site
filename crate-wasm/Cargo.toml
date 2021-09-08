@@ -3,8 +3,11 @@ name = "mockwork"
 version = "0.1.0"
 authors = ["Yury <yury.yukhananov@tutanota.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Asynchronous Network Simulator on Web Assembly"
+repository = "https://github.com/Retamogordo/mockwork"
+keywords = ["asynchronous", "wasm", "web-assembly", "web-worker", "browser-simulator-demo"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [target.'cfg(target_arch = "wasm32")']
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -29,17 +32,6 @@ console_error_panic_hook = { version = "0.1.6", optional = false }
 #
 # Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
 wee_alloc = { version = "0.4.5", optional = true }
-[dependencies.web-sys]
-version = "0.3.51"
-features = [
-    "console", 
-    "Window", 
-    "Document",
-    "Element",
-    "HtmlElement",
-    "HtmlTextAreaElement",
-    "Worker",
-]
 
 [dependencies]
 async-std = {version = "1.9.0", features = ["attributes"]}

@@ -145,8 +145,6 @@ impl MockWork {
 
         let transmit_scheduler = TransmitScheduler::new();
 
-        let lines = edges.keys();
-
         let transmit_schedule_data = Arc::new(
             TransmitScheduleData {
                 recently_sent: AtomicUsize::new(0),
@@ -178,7 +176,7 @@ impl MockWork {
     }
 
     pub async fn run(&mut self) {
-        log::info!("run, status {}", self.status.load(Ordering::Relaxed));
+        log::debug!("run, status {}", self.status.load(Ordering::Relaxed));
 
         match self.status.load(Ordering::Relaxed).into() {
             MockWorkStatus::Idle => {
@@ -224,7 +222,7 @@ impl MockWork {
     pub async fn toggle_node_connection(&self, node_addr: &NodeAddress) {
         let mut connected = false;
 
-        log::info!("toggle_node_connection node {}", node_addr);
+        log::debug!("toggle_node_connection node {}", node_addr);
         if let Some(node) = self.nodes.get(&node_addr) {
 //            connected = node.lock().unwrap().is_connected();
             if let Ok(locked) = node.try_lock() {
@@ -235,7 +233,7 @@ impl MockWork {
             self.connect_node(node_addr).await;
         } else {
             if let Some(node) = self.nodes.get(&node_addr) {
-                log::info!("disconnecting node {}", node_addr);
+                log::debug!("disconnecting node {}", node_addr);
                 if let Ok(mut locked) = node.try_lock() {
                     locked.disconnect().await;
                 }
@@ -373,7 +371,7 @@ impl MockWork {
     }
 
     pub async fn suspend_transmits(&mut self)  -> MockWorkStatus {
-        log::info!("in suspend_transmits, status {}", MockWorkStatus::from(self.status.load(Ordering::Relaxed)));
+        log::debug!("in suspend_transmits, status {}", MockWorkStatus::from(self.status.load(Ordering::Relaxed)));
         
         match self.status.load(Ordering::Relaxed).into() {
             MockWorkStatus::Running => {
@@ -397,14 +395,14 @@ impl MockWork {
         }
 
         let curr_status = self.status.load(Ordering::Relaxed).into();
-        log::info!("suspend_transmits Current mock work status: {}", curr_status);
+        log::debug!("suspend_transmits Current mock work status: {}", curr_status);
 
         curr_status
 
     }
     pub async fn resume_transmits(&mut self) -> MockWorkStatus {
         let curr_status = self.status.load(Ordering::Relaxed);
-        log::info!("resume_transmits Current mock work status: {}", 
+        log::debug!("resume_transmits Current mock work status: {}", 
             MockWorkStatus::from(curr_status));
 
         match self.status.load(Ordering::Relaxed).into() {
@@ -438,13 +436,15 @@ impl MockWork {
             _ => (),
         }
         let curr_status = self.status.load(Ordering::Relaxed).into();
-        log::info!("resume_transmits Current mock work status: {}", curr_status);
+        log::debug!("resume_transmits Current mock work status: {}", curr_status);
 
         curr_status
     }
 
     fn register_line_event_sender_by_line(&self, line_id: &LineId, edge: &Edge) {
+        log::debug!("before lock {}", edge.node_addr1);
         let n1 = self.nodes.get(&edge.node_addr1).unwrap().lock().unwrap();
+        log::debug!("before lock {}", edge.node_addr2);
         let n2 = self.nodes.get(&edge.node_addr2).unwrap().lock().unwrap();
 
         let endpoint_id1 
@@ -454,10 +454,11 @@ impl MockWork {
             = n2.socket_profiles().iter()
             .find(|sp| *sp.id.as_val_ref() == *line_id).unwrap().id;
 
+        log::debug!("before lock schd");
         let mut transmit_scheduler_locked = self.transmit_scheduler.lock().unwrap();
 
         if n2.line_event_sender().is_none() {
-            log::info!("{:?}", n2);
+            log::debug!("{:?}", n2);
             return;
         }
         transmit_scheduler_locked.register_line(
@@ -466,7 +467,7 @@ impl MockWork {
         );
 
         if n1.line_event_sender().is_none() {
-            log::info!("{:?}", n1);
+            log::debug!("{:?}", n1);
             return;
         }
         transmit_scheduler_locked.register_line(
@@ -475,46 +476,6 @@ impl MockWork {
         );
     }
 
-//    fn register_line_event_sender_by_node(&self, node_addr: &NodeAddress) {
-    fn register_line_event_sender_by_node(&self, 
-        node: &mut Node,
-    ) {
-//        if let Some(node) = self.nodes.get(node_addr) {
-//            let node_locked = node.lock().unwrap();
-//if let Some(line_event_sender) = node_locked.line_event_sender() {
-        if let Some(line_event_sender) = node.line_event_sender() {
-        
-            for sp in node.socket_profiles() {
-//                    for sp in node_locked.socket_profiles() {
-                    let line_id = *sp.id.as_val_ref();
-                if let Some(other) 
-                    = self.get_other_side_node(&node.addr(), &line_id) {
-
-                    if let Ok(mut other_locked) = other.try_lock() {
-                        if let Some(other_line_event_sender) = other_locked.line_event_sender() {
-                            let other_id = match sp.id {
-                                LineTransceiverId::First(id) => LineTransceiverId::Second(id),
-                                LineTransceiverId::Second(id) => LineTransceiverId::First(id),
-                            };
-
-                            let mut transmit_scheduler_locked = self.transmit_scheduler.lock().unwrap();
-
-                            transmit_scheduler_locked.register_line(
-                                sp.id,
-                                other_line_event_sender.clone(),
-                            );
-
-                            transmit_scheduler_locked.register_line(
-                                other_id,
-                                line_event_sender.clone(),
-                            );
-                        }
-                    } 
-                }       
-            }
-        }
-//        }
-    }
 
     pub async fn shutdown(&self) {
         for node in self.nodes.values() {
@@ -530,7 +491,7 @@ impl MockWork {
 impl Drop for MockWork {
     fn drop(&mut self) {
 //        self.shutdown();
-        log::info!("Mock work dropping");
+        log::debug!("Mock work dropping");
     }
 }
 
@@ -621,7 +582,7 @@ impl TransmitScheduler {
                 let item = self.schedule.pop().unwrap(); 
                 let id = item.id;
                 if let Some(tx) = self.line_senders.get(&id) {
-                    let received_after = item.when.duration_since(item.what.transmit_time);
+//                    let received_after = item.when.duration_since(item.what.transmit_time);
 
 //                    log::info!("{}@{} rx {:}", id, 
 //                                received_after.as_millis(),
@@ -638,10 +599,9 @@ impl TransmitScheduler {
                                     { sent_per_line.fetch_add(1, Ordering::Relaxed); })
                                 .or_insert(AtomicUsize::new(0));
                         },
-                        Err(err) => (), //panic!("{}", err),
+                        Err(_err) => (), //panic!("{}", _err),
                     } 
                 }
-
             } else { 
                 // return delay after which the top item to be transmitted
                 status.remaining.store(self.schedule.len(), Ordering::Relaxed);
@@ -661,7 +621,7 @@ async fn transmit_scheduler_loop(
     transmit_schedule_data: Arc<TransmitScheduleData>
 ) {
     let mut running_iter = 0;
-    let mut next_wakeup_delay = Duration::from_secs(1_000_000); 
+    let mut next_wakeup_delay; 
     loop {
 
         next_wakeup_delay = Duration::from_secs(1_000_000);
@@ -678,7 +638,8 @@ async fn transmit_scheduler_loop(
                     crate::target_dependant::run_on_next_js_tick().await;
                 }
 
-                match scheduler.lock().unwrap().tick(&transmit_schedule_data)  {
+                let next_delay = scheduler.lock().unwrap().tick(&transmit_schedule_data);
+                match next_delay  {
                     Some(delay) => { next_wakeup_delay = delay; },             
                 
                     None => 
@@ -720,5 +681,5 @@ async fn transmit_scheduler_loop(
             },
         }
     }
-    log::info!(" +++++++++++ Transmit Sch loop over, status: {}", mw_status.load(Ordering::Relaxed));
+    log::debug!(" +++++++++++ Transmit Sch loop over, status: {}", mw_status.load(Ordering::Relaxed));
 } 

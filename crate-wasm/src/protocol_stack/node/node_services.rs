@@ -1,10 +1,10 @@
-//use std::sync::{Arc, RwLock};
-//use std::collections::HashMap;
-use super::super::first_layer::{LineStatistics};
+//use super::super::first_layer::{LineStatistics};
 use super::super::second_layer::{
     LineChannelResult, SecondLayerCommand, 
-    ServiceRequestType, ServiceResultType, LineStatsResult};
-use super::super::{ServiceToken, ChannelType, ChannelType::*};
+    ServiceRequestType, ServiceResultType, 
+//    LineStatsResult
+};
+use super::super::{ServiceToken, ChannelType};
 use super::super::line::{LineId};
 use super::{
     StreamHandle, ChannelError, 
@@ -15,12 +15,10 @@ use core::time::Duration;
 pub trait NodeService {
     type Result;
 
- //   fn new(acq_handle: AcquireChannelHandle) -> Self;
- //   fn init(&mut self, acq_handle: AcquireChannelHandle);
     fn request_type(&self) -> ServiceRequestType;
 //    async fn run(&self) -> Result<T, TopLevelError>;
 }
-
+/*
 pub struct LineStatsService {
 	acq_stream_handle: AcquireStreamHandle,
     batch: usize,
@@ -40,8 +38,6 @@ impl LineStatsService {
 	pub async fn run_once(self) -> Option<LineStatistics> {
         let mut stream = self.acq_stream_handle.acquire().await
             .map_err(|_| unimplemented!() )?;
-
-        log::info!("Running line stats service");
 
         match stream.event().await {
             Some(event) => match &event {
@@ -65,9 +61,8 @@ impl NodeService for LineStatsService {
         ServiceRequestType::LineStats(self.batch)   
     }
 }
-
+*/
 pub struct AddressMapService {
-//	acq_stream_handle: Option<AcquireStreamHandle>,
     dest: NodeAddress,
     request_result: Result<AcquireStreamHandle, ChannelError>,
 }
@@ -78,9 +73,7 @@ impl AddressMapService {
 		dest: NodeAddress, 
 		expires: Duration, 
     ) -> Self {
-        let request_result: Result<AcquireStreamHandle, ChannelError>;
         Self {
-//			acq_stream_handle, 
             dest,
             request_result: Self::send_request(src, dest, expires),
 		}
@@ -93,7 +86,6 @@ impl AddressMapService {
 
 		let channel_token = ServiceToken::durable(expires, ChannelType::Service);
 //		let channel_token = ServiceToken::ageless();
-//		log::info!("\t\tCalling service_stream from {} acquire_channel", self.addr);
 
 		let node_cmd_tx = src.node_cmd_tx.clone().unwrap();
 
@@ -106,7 +98,6 @@ impl AddressMapService {
 
 		src.service_manager_tx.as_mut().unwrap().unbounded_send(service_handle)
 			.map_err(|_err| {
-//				log::error!("{}", _err);
 				ChannelError(channel_token, LineChannelResult::Disconnected)
 			} )?;
 	
@@ -127,8 +118,6 @@ impl AddressMapService {
             if let Ok(mut stream) = acq_stream_handle.acquire().await {
  //               .map_err(|_| unimplemented!() )?;
 
-                log::info!("Running address map service");
-
                 match stream.event().await {
                     Some(event) => match &event {
                         ServiceResultType::AddressMapUpdate(dest) => Some(*dest),
@@ -138,7 +127,7 @@ impl AddressMapService {
                     None => None,
                 }
             } else {
-                log::error!("Addr map handle not acquired");
+                log::debug!("Addr map handle not acquired");
                 None
             }
     
@@ -155,7 +144,6 @@ impl NodeService for AddressMapService {
 }
 
 pub struct PeerChannelService {
-    //	acq_stream_handle: Option<AcquireStreamHandle>,
     dest: NodeAddress,
     request_result: Result<AcquireStreamHandle, ChannelError>,
 }
@@ -164,29 +152,32 @@ impl PeerChannelService {
     pub fn new(
         src: &mut Node,
         dest: NodeAddress, 
-        expires: Duration, 
+        expires: Option<Duration>, 
     ) -> Self {
-        let request_result: Result<AcquireStreamHandle, ChannelError>;
         Self {
-//			acq_stream_handle, 
             dest,
             request_result: Self::send_request(src, dest, expires),
         }
     }
 
-    fn send_request(src: &mut Node, dest: NodeAddress, expires: Duration) -> Result<AcquireStreamHandle, ChannelError> {
+    fn send_request(src: &mut Node, dest: NodeAddress, expires: Option<Duration>) -> Result<AcquireStreamHandle, ChannelError> {
 		if !src.is_connected() {
 			return Err(ChannelError(ServiceToken::default(), LineChannelResult::Disconnected));
 		}
+        let channel_token;
 
-        let channel_token = ServiceToken::ageless();
+        if let Some(expires) = expires {
+            channel_token = ServiceToken::durable(expires, ChannelType::Service);
+        } else {
+            channel_token = ServiceToken::ageless();
+        }
 //		let channel_token = ServiceToken::durable(expires, ChannelType::Service);
 		let line_id;
 		if let Some(entry) = src.address_map.read().unwrap().get(&dest) {
 			line_id = entry.line_id.clone();
 		}
 		else {
-			log::error!("Not found target node {} at {}", dest, src.addr);
+			log::debug!("Not found target node {} at {}", dest, src.addr);
 			return Err(ChannelError(channel_token, LineChannelResult::NodeNotFound));
 		}	
 
@@ -201,7 +192,6 @@ impl PeerChannelService {
 
 		src.service_manager_tx.as_mut().unwrap().unbounded_send(service_handle)
 			.map_err(|_err| {
-				log::error!("{}", _err);
 				ChannelError(channel_token, LineChannelResult::Disconnected)
 			} )?;
 	
@@ -213,7 +203,6 @@ impl PeerChannelService {
 			))
 		)
 		.map_err(|_err| {
-			log::error!("{}", _err);
 			ChannelError(channel_token, LineChannelResult::Disconnected)
 		})?;
 
@@ -225,9 +214,9 @@ impl PeerChannelService {
             match acq_stream_handle.acquire().await {
                 Ok(stream) => return Some(stream),
                 Err(ChannelError(_, LineChannelResult::NodeNotFound)) 
-                    => log::error!("node not found"),
+                    => log::debug!("node not found"),
                 Err(err) 
-                    => log::error!("Peer channel handle not acquired {}", err),
+                    => log::debug!("Peer channel handle not acquired {}", err),
             }
 
         }

@@ -67,7 +67,8 @@ import("../../crate-wasm/pkg").then(wasm => {
         }, autoStopMs);
 
         startPolling();
-        wasm.network_refresh_address_map(msg.params.seeds, BigInt(1000));
+        
+        wasm.network_refresh_address_map(msg.params.seeds, BigInt(msg.params.expiresMs));
 
    /*     setTimeout( () => {
           let res = JSON.parse( wasm.poll_mock_work("|0.0|") );
@@ -82,17 +83,17 @@ import("../../crate-wasm/pkg").then(wasm => {
       }  
     } 
     else if (msg.cmd == "displayNodeAddressMap") {
-      console.log('displayNodeAddressMap' + msg.node_id);
+//      console.log('displayNodeAddressMap' + msg.node_id);
       let res = JSON.parse(wasm.get_node_address_map(msg.node_id));
       self.postMessage( { ev: "displayNodeAddressMap", address_map: res, src: msg.node_id } )
     }
     else if (msg.cmd == "toggleNodeConnection") {
-      console.log('toggleNodeConnection' + msg.node_id);
+//      console.log('toggleNodeConnection' + msg.node_id);
       wasm.toggle_node_connection(msg.node_id);
 //      self.postMessage( { ev: "toggleNodeConnection", connected: res, src: msg.node_id } )
     }
     else if (msg.cmd == "setMWLoopCycleTickDelay") {
-      console.log('nodeLoopCyclesTickDelay ' + msg.params['nodeLoopCyclesTickDelay']);
+//      console.log('nodeLoopCyclesTickDelay ' + msg.params['nodeLoopCyclesTickDelay']);
       nodeLoopCyclesTickDelay = msg.params['nodeLoopCyclesTickDelay'];
       wasm.set_loop_cycle_gap(nodeLoopCyclesTickDelay);
     }
@@ -112,13 +113,12 @@ import("../../crate-wasm/pkg").then(wasm => {
           wasm.peer_channel_test(msg.src, msg.dest);
     }
     else if (msg.cmd == "injectPeerTest") {
-      console.log("inject peer test ", msg.src, " -> ", msg.dest);
+//      console.log("inject peer test ", msg.src, " -> ", msg.dest);
       wasm.peer_channel_test(msg.src, msg.dest);
     }
     else if (msg.cmd == "peerNodeTap") {
       if (src === undefined) {
         src = msg.node_id 
-  //      if (interval !== undefined) clearInterval(interval)
       }
       else {
  
@@ -133,7 +133,6 @@ import("../../crate-wasm/pkg").then(wasm => {
         wasm.peer_channel_test(src, dest);
 
         src = undefined;
-//        stoppingPolling = true;
       }
     }
     else if (msg.cmd == "pollMockWork") { 
@@ -155,20 +154,20 @@ import("../../crate-wasm/pkg").then(wasm => {
 
   }
     else if (msg.cmd == "stopCurrentOperation") { 
-      console.log("worker stopCurrentOperation cmd, op:", msg.op);
+//      console.log("worker stopCurrentOperation cmd, op:", msg.op);
 //      stoppingPolling = true;
       if (msg.op == 'randomRun') {
-        console.log("stopping random run");
+///        console.log("stopping random run");
         wasm.stop_infinite_run();
       }
       else 
       if (msg.op == 'addressMap') {
-        console.log("stopping address map");
+//        console.log("stopping address map");
         wasm.stop_refreshing_address_map();
       }
       else
       if (msg.op == 'peerChannelRun') {
-        console.log("stopping peer channel run");
+//        console.log("stopping peer channel run");
         wasm.stop_infinite_run();
       }
     }
@@ -190,7 +189,6 @@ import("../../crate-wasm/pkg").then(wasm => {
           let res = JSON.parse( wasm.poll_mock_work(nodeLoopCyclesTickDelay) );
           
           if (res === undefined) {
-            console.log("polling result is undefined");
             return;
           }
 
@@ -198,10 +196,8 @@ import("../../crate-wasm/pkg").then(wasm => {
           stoppingPolling |= (res['was_suspended'] == true);
 
           if (stoppingPolling) {
-            console.log(res['mw_status'] + " §§§§§§§§§§§§§§§ stopping polling §§§§§§§§");
               pollInterval = clearInterval(pollInterval);
               stoppingPolling = false;
-  //          }
           }
           
           self.postMessage( { ev: 'pollResult', 
@@ -223,22 +219,4 @@ import("../../crate-wasm/pkg").then(wasm => {
       }, 50)
     }
   } 
- /*  
-  function calcCurrentTraffic(pollRes) {
-    let traffic = pollRes["current_transmit_info"]["traffic_samples"];
-    let totalTraffic = 0;
-
-    Object.keys(traffic).forEach( (line) => {
-      let sample = traffic[line];
-      let outgoing = sample[0];
-      let incoming = sample[1];
-
-      totalTraffic += (incoming + outgoing);
-    });
-    return totalTraffic;
-  }*/
 });
-
-function output_box() {
-  console.log("output_box");
-}

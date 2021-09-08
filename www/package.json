@@ -1,15 +1,15 @@
 {
   "author": "Yury Yukhananov <yury.yukhananov@tutanota.com>",
-  "name": "mockwork-site",
+  "name": "mockwork",
   "version": "0.1.0",
-  "repository": "https://github.com/Retamogordo/mockwork-site",
+  "repository": "https://github.com/Retamogordo/mockwork",
   "license": "Apache-2.0/MIT",
   "scripts": {
     "start": "webpack-dev-server -d",
     "build": "webpack --mode production"
   },
   "bin": {
-    "create-rust-wasm-worker": ".bin/create-rust-wasm-worker.js"
+    "create-rust-wasm-worker": ".bin/mockwork.js"
   },
   "devDependencies": {
     "@wasm-tool/wasm-pack-plugin": "0.1.6",

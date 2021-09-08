@@ -36,7 +36,7 @@ impl<T> Iterator for NoneIter<T> {
 	}
 }
 
-
+/*
 #[macro_export]
 macro_rules! warn_on_error {
 	($result: expr) => {
@@ -46,4 +46,4 @@ macro_rules! warn_on_error {
 		}
 	}
 }
-
+*/

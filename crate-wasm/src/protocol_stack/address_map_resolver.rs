@@ -190,14 +190,14 @@ impl EventTarget<LayerPipeItem> for AddressMapResolver {
                             let hdr = hdr.clone();
                             shared_alloc.extend(
                                 self.lines.iter()
-                                .filter(|&line| *line != source_line_id)
-                                .map(|&line_id| {                                            
-                                    NodeCommand(line_id,
-                                        SecondLayerCommand::Send(msg.clone(),
-                                            hdr,
-                                            Some(service_token)
-                                        )                                            
-                                ).into()
+                                    .filter(|&line| *line != source_line_id)
+                                    .map(|&line_id| {                                            
+                                        NodeCommand(line_id,
+                                            SecondLayerCommand::Send(msg.clone(),
+                                                hdr,
+                                                Some(service_token)
+                                            )                                            
+                                    ).into()
                             }));
 
                             if hdr.dest == NodeAddress::ANY {
@@ -208,6 +208,7 @@ impl EventTarget<LayerPipeItem> for AddressMapResolver {
                             }
                         }
                         else {
+                            let hdr = hdr.clone();
                             shared_alloc.push_done(
                                 self.make_resp_cmd(service_token, source_line_id, hdr.src)
                                     .into()
@@ -235,19 +236,15 @@ impl EventTarget<LayerPipeItem> for AddressMapResolver {
                                                 ServiceResultType::AddressMapUpdate(src))
                                         ).into()
                                     );
-
                                     self.service_entries.remove(&service_token);
                                     shared_alloc.take_current();
-
                                 }
-                            } else {
-    
+                            } else {   
                                 shared_alloc.push_done(
                                     NodeCommand(*req_line_id,
                                         SecondLayerCommand::SendAsIs(msg, Some(service_token))
                                     ).into());
                                 shared_alloc.take_current();
-
                             } 
                         }
                     },
@@ -257,7 +254,7 @@ impl EventTarget<LayerPipeItem> for AddressMapResolver {
                         let source_line_id = *source_line_id;
 
                         if let Some(_) = self.service_entries.remove(&service_token) {
-                            log::error!("drop addr token {} recv on {}", 
+                            log::debug!("drop addr token {} recv on {}", 
                                 service_token,self.node_addr);
                             shared_alloc.extend(
                                 self.lines.iter()

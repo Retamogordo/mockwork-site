@@ -118,17 +118,15 @@ fn line_stats(addr: &NodeAddress, line_id: LineId, batch: usize) {
             }
         };
 
-    log::info!("after got handle");
-
     let handle = target_dependant::spawn( async move {
 //            wasm_bindgen_futures::spawn_local( async move {
         let res = line_stats_handle.run_once().await;
         
         match res {
             Ok(stats) => {
-                log::info!("{}", stats);
+                log::debug!("{}", stats);
             },
-            Err(err) => log::error!("{}", err),
+            Err(err) => log::debug!("{}", err),
         } 
     });
     block_on_target!(handle.handle());

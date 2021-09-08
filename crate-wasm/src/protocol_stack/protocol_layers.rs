@@ -22,10 +22,10 @@ pub struct PhysicalLayerProtocolStack {
 
 impl PhysicalLayerProtocolStack {
 	pub fn new(line_model: LineModel) -> Self {
-		let pipe = Pipe::new();
+		let mut pipe = Pipe::new();
 
 		let ping = LinePing::new(line_model);
-//		pipe.hook(ping);
+		pipe.hook(ping);
 
 		Self { pipe }
 	}
@@ -119,7 +119,7 @@ pub struct ProtocolStack {
 impl ProtocolStack {
 	pub fn new(
 		node_addr: NodeAddress,
-		line_id: LineId,
+//		line_id: LineId,
 		line_model: LineModel,
 		max_first_layer_channels: usize,
 	) -> Self {

@@ -22,7 +22,6 @@ FSM.State = function(id, description, onCallback) {
 }
 
 FSM.State.from = function(obj) {
-//		let state = new State(obj.id, obj.description, obj.onCallback);
 	let state = new FSM.State();
 	Object.assign(state, obj);
 
@@ -52,17 +51,13 @@ FSM.changeState = function(fsm, sig, state) {
 	let result;
 	let transition = state.getTransition(sig.id);
 
-//	console.log("FSM: sig: ", sig)
-
 	if ( transition ) {
-/*		try {
-			fsm.onLeave && fsm.onLeave(this, state);
+		try {
+			transition.nextState != state && state.exit && state.exit(this, state);			
 		}
 		// do not consume callback exceptions
-		finally	{*/
+		finally	{
 			try	{	
-
-//				console.error( "sig.payload: ")
 
 				(transition.callback && (result = transition.callback(sig.payload, state)))
 						 || (result = sig.payload);
@@ -70,18 +65,15 @@ FSM.changeState = function(fsm, sig, state) {
 			}
 			catch (error) {
 				result = error;
-				console.error("FSM caught: ", error);
-			//	console.log("sig.payload: ", sig)
+//				console.error("FSM caught: ", error);
 
 				state = transition.failureState || state;
 				return state;
 			}
 			try {
-//				console.log("FSM result: ", result, "state: ", state)
 				state.settledResult = undefined;
 
 				if (state.on)
-//					state.settledResult = FSM.tryCallback(state.on)(this, state, result);
 					state.settledResult = state.on(this, state, result);
 				else if (fsm.onSettle)
 					state.settledResult = fsm.onSettle(this, state, result);
@@ -90,7 +82,7 @@ FSM.changeState = function(fsm, sig, state) {
 				console.error("FSM callback threw: ", error, ", throwing on...");
 				throw error;
 			}
-//		}
+		}
 	}
 	return state;		
 }
@@ -151,7 +143,6 @@ FSM.prototype = (function () {
 	}
 
 	protoObj.inputSignalDelayed = function(sig, delay) {
-//		console.log("INPUT SIGNAL DELAYED: ", sig)
 		setTimeout( () => { this.inputSignal(sig) }, delay );	
 	}
 

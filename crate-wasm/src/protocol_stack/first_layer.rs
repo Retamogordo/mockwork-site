@@ -3,16 +3,11 @@ use instant::Instant;
 use strum_macros::{Display};
 
 use crate::pipe::{EventTarget, SharedPipeAlloc};
-//use crate::pipe::{PipeEntities, EventTarget, IntoOption, SharedPipeAlloc};
 use super::{TimerOwnerToken};
 use super::physical_layer::{*};
 use super::second_layer::{*};
-//use crate::utils::{SeqId};
 use super::{ChannelToken, *};
 use crate::protocol_stack::layer_pipe_item::{*};
-
-//type LowerLayerItems = super::physical_layer::LayerPipeItem;
-//type UpperLayerItems = super::second_layer::LayerPipeItem;
 
 #[derive(Clone, Copy)]
 pub struct LineStatistics {
@@ -40,25 +35,19 @@ impl std::fmt::Display for LineStatistics {
 	}
 }
 
-
 #[derive(Clone, Display)]
 pub enum FirstLayerEvent {
 	ChunkReceived(Chunk, Instant),
-//	ChunkReceived(Chunk, SystemTime),
-//    ReceiverDisconnected,
     TimerFinished(TimerOwnerToken),
 	LineOk(Chunk, Duration),
-//	LineOk(Chunk, SystemTime),
 	PingLineTimeout,
 	HandshakeFailure(ChannelToken),
 	ChannelEstablished(ChannelToken),
 	IncomingDataChannel(ChannelToken),
 	ChannelExpired(ChannelToken),
 	ChannelKeptAlive(ChannelToken),
-//	InvalidChannelToken(ChannelToken),
 	ChannelDropped(ChannelToken),
 	TooManyChannels(ChannelToken, usize),
-//	ChannelRefused(ChannelToken),
 	LineStatsStarted(ServiceToken),
 	LineStatsReady(ServiceToken, LineStatistics),
 	LineStatsFailure(ServiceToken),
@@ -73,20 +62,12 @@ impl FirstLayerEvent {
 		mem::replace(self, Self::None)
 	}
 }
-/*
-impl Default for FirstLayerEvent {
-	fn default() -> Self {
-		Self::None
-	}
-}
-*/
+
 #[derive(Clone, Display)]
 pub enum FirstLayerCommand {
-//	Shutdown,
     StartTimer(TimerOwnerToken),
 	PassToSend(Chunk, ChunkType, Option<ChannelToken>),
 	Send(Chunk, FirstLayerHeader),
-//	PingLine(Chunk),
 	PingLineForStats(usize, ChannelToken),
 	LineStats(ServiceToken, usize),
 	ChannelRequest(ChannelToken, bool),

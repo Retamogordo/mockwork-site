@@ -145,15 +145,15 @@ impl ServiceManageHandle {
 				.map_err(|_| ChannelError(self.token, LineChannelResult::Disconnected)) 
 		}
 		else { 
-			log::error!("{} Cannot activate stream", self.node_addr);
+			log::debug!("{} Cannot activate stream", self.node_addr);
 			Err(ChannelError(self.token, LineChannelResult::Disconnected)) 
 		}
 	}
 
-	pub fn activated(&self) -> bool {
+/*	pub fn activated(&self) -> bool {
 		self.activate_stream_tx.is_none()
 	}
-
+*/
 	pub fn token(&self) -> &ServiceToken {
     	&self.token 
     }
@@ -184,7 +184,7 @@ impl ServiceManageHandle {
 
 impl Drop for ServiceManageHandle {
 	fn drop(&mut self) {
-		log::warn!("ServiceManageHandle is dropping stream {} on {}, {}", 
+		log::debug!("ServiceManageHandle is dropping stream {} on {}, {}", 
 			self.token, self.node_addr, self.drop_reason.as_ref().unwrap());
 //		self.drop_stream(ChannelError::ServiceComplete(self.token));
 		let _res = self.drop_stream_tx.take().unwrap()
@@ -237,7 +237,7 @@ impl Drop for StreamHandle {
 	fn drop(&mut self) {
 		let token = self.token;
 
-		log::warn!("STREAM IS DROPPING {} on {}", token, self.node_addr);
+		log::debug!("STREAM IS DROPPING {} on {}", token, self.node_addr);
 		self.socket_cmd_tx.take()
 			.and_then(|tx| {
 				Some( tx.unbounded_send( NodeCommand(self.line_id,

@@ -333,9 +333,9 @@
       <div id="cy"> 
         <div id="setupTab" class="tabcontent">
           <br><label for="nodesTextbox">Nodes: </label>
-          <input type="text" id="nodesTextbox" value=2 />
+          <input type="text" id="nodesTextbox" value=120 />
           <br><label for="edgesTextbox">Edges: </label>
-          <input type="text" id="edgesTextbox" value=1 />
+          <input type="text" id="edgesTextbox" value=150 />
           <br><br><label>Line delay range (ms): </label>
           <br><label for="lineDelayMinBox">Min: </label>
           <input type="text" id="lineDelayMinBox" value=3 />
@@ -347,7 +347,7 @@
         <div id="runTab" class="tabcontent">
           <button type="button" id="addressMapButton" 
             title="This test expects that nodes run address map recognition sequence prior to data transfers">Warm Up</button>
-          <br><label for="addressMapSeeds" class="slider_label" id="addressMapSeedsLabel">Address Map Seeds: </label>
+          <br><label for="addressMapSeeds" class="slider_label" id="addressMapSeedsLabel">Address Map Seeds: 3</label>
           <input type="range" class="slider" min="1" max="30" value="3", id="addressMapSeeds"> 
           <p></p>
           <button type="button" id="startRandomLoopRunButton">Run Random Transfers</button>
@@ -366,19 +366,19 @@
         <br><label for="sessionsLimit" class="slider_label" id="sessionsLimitLabel">Session number limit: </label>
         <input type="range" class="slider" min="1" max="300" value="20", id="sessionsLimit"> 
         <br><label for="nodeLoopCyclesTickDelay" class="slider_label" id = "nodeLoopCyclesTickDelayLabel">Delay between cycles in node event loops (ms): </label>
-        <input type="range" min="1" max="20" value="5", id="nodeLoopCyclesTickDelay">            
+        <input type="range" min="1" max="20" value="1", id="nodeLoopCyclesTickDelay">            
 
       </div>
 
       <div class="stats_bars" id="stats_bars">
 
-        <label for="currentTrafficStatsBar">traffic: </label>
+        <label for="currentTrafficStatsBar" id="currentTrafficStatsBarLabel">traffic: </label>
         <div id="currentTrafficStatsBar" class="statsBar"></div>
         <p> </p>
-        <label for="overallTrafficStatsBar">overall traffic: </label>
+        <label for="overallTrafficStatsBar" id="overallTrafficStatsBarLabel">overall traffic: </label>
         <div id="overallTrafficStatsBar" class="statsBar"></div>
         <p> </p>
-          <label for="sessionsRunningStatsBar">sessions: </label>
+          <label for="sessionsRunningStatsBar" id="sessionsRunningStatsBarLabel">sessions: </label>
           <div id="sessionsRunningStatsBar" class="statsBar"></div>      
       </div>    
 

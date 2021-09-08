@@ -19,7 +19,7 @@ struct SendCommandHandle {
 }
 
 pub struct Socket {
-	profile: SocketProfile,
+//	profile: SocketProfile,
 	_node_addr: NodeAddress,
 //	is_connected: bool,
 
@@ -39,7 +39,7 @@ impl Socket {
 
 		let protocol_stack = ProtocolStack::new(
 			_node_addr, 
-			*profile.id.as_val_ref(),
+//			*profile.id.as_val_ref(),
 			profile.line_model.clone(), 
 			profile.max_first_layer_channels,
 		);
@@ -55,7 +55,7 @@ impl Socket {
 		};
 
 		Self {
-			profile, 
+//			profile, 
 			_node_addr,
 			protocol_stack: RefCell::new(protocol_stack),
 //			is_connected: false,
@@ -68,11 +68,11 @@ impl Socket {
 
 /*	pub fn id(&self) -> LineTransceiverId {
 		self.profile.id
-	}*/
+	}
 	pub fn line_id(&self) -> LineId {
 		*self.profile.id.as_val_ref()
 	}
-	
+*/	
 	//pub fn line_model(&self) -> &LineModel {
 	//	&self.profile.line_model
 	//}
@@ -92,22 +92,13 @@ impl Socket {
 		
 	}
 
-	pub fn sample_traffic(&mut self) -> (u32, u32) {
+/*	pub fn sample_traffic(&mut self) -> (u32, u32) {
 		let sample = self.send_cmd_handle.borrow().traffic_counter;
 		self.send_cmd_handle.borrow_mut().traffic_counter = (0, 0);
 		sample
 	}
-
-	pub fn on_command(&mut self, cmd: SecondLayerCommand) 
-	//		-> Vec<SecondLayerEvent> {
-		-> &mut Vec<SecondLayerEvent> {
-			//		log::info!("CMD {} in socket agent on_command, {}", cmd, self.node_addr);
-//			log::info!("CMD {} in socket agent on_command, {}", cmd, self.node_addr);
-/*		if !self.is_connected() {
-			self.events.clear();
-			return &mut self.events;
-		}	
 */
+	pub fn on_command(&mut self, cmd: SecondLayerCommand) -> &mut Vec<SecondLayerEvent> {
 		match cmd {
 			 _ => {
 				let mut stack_borrowed = self.protocol_stack.borrow_mut();
@@ -146,10 +137,6 @@ impl Socket {
 		
 		&mut self.events
 	}	
-
-	pub fn recent_events(&mut self) -> &mut Vec<SecondLayerEvent> {
-		&mut self.events
-	}
 }
 
 impl SendCommandHandle {
@@ -204,7 +191,6 @@ impl SendCommandHandle {
 			if let Some(when) =
 				self.shift_transmit_sub_millis_fraction(&transmit_time, &receive_time) {
 		
-//			log::info!("schduling for transmit on {}, {}", self.profile.id, what.data);
 				match self.notify_transmit_tx.unbounded_send( ScheduledTransmit {
 					id: self.profile.id,
 					when,

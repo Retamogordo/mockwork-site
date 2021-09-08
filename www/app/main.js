@@ -26,14 +26,9 @@ const nodeLoopCyclesTickDelaySlider = document.querySelector("#nodeLoopCyclesTic
 const sessionsLimitSlider = document.querySelector("#sessionsLimit");
 
 const createButton = document.querySelector("#createButton");
-//const addressMapButton = document.querySelector("#addressMapButton");
-//const displayNodeAddressMapButton = document.querySelector("#displayNodeAddressMapButton");
-
-//var statsCanvas = document.getElementById("statsCanvas");
 var cy;
 
 var currentTab;
-//var currentMode;
 var nodesNum;
 var edgesNum;
 var minLineDelay;
@@ -66,48 +61,23 @@ worker.addEventListener("message", ev => {
 		displayNodeAddressMap(message);
 		break;
 	}
-/*	
-	case 'toggleNodeConnection': {
-		cy.$id(message.src).data({connected: message.connected});
-		let connected = cy.$id(message.src).data()['connected'];
-
-		cy.$id(message.src).style({
-			'background-color': 
-				connected ? 'grey' : 'red'
-		});
-		break;
-	}
-*/
 	case 'pollResult': {
 		if (message.iteration % 100 == 0) {
 //			console.log(performance.memory);
 //			console.log(message.pollResult["current_transmit_info"])
 //			console.log("being transmitted: ", message.pollResult["being_transmitted"])
-/*				console.log("traffic: " + statsBarItems["traffic"] + ", active streams: " 
-			+ statsBarItems["active_streams"]
-			+ ", total streams: " + message.pollResult["total_streams"]
-			+ ", failed streams: " + message.pollResult["failed_streams"]
-			+ ", overall outgoing: " + overall_outgoing
-			+ ", overall incoming: " + overall_incoming
-			);*/
 		}
 
 		if (!message.pollingStopped) 
 			currentTab.pollSampleReady && currentTab.pollSampleReady(message.pollResult);
 		else {
 			currentTab.currentOpStopped && currentTab.currentOpStopped(message.pollResult);
-//			console.log("polling stopped");
-
 		}
 		break;
 	}
 
 	case 'pollError': {
-//		currentTab.pollError && currentTab.pollError(message.pollError);
 		currentTab.currentOpStopped && currentTab.currentOpStopped(message.pollResult);
-/*		worker.postMessage({
-			cmd: "shutdownInstance", 
-		});*/
 		break;
 	}
 
@@ -116,8 +86,6 @@ worker.addEventListener("message", ev => {
 		break;
 	}
 	case 'output_terminal': {
-		console.log(message.text);
-		console.log(outputText);
 		if (outputTextIndex < 4) {
 			outputText[outputTextIndex] = message.text;
 		} else {
@@ -133,12 +101,10 @@ worker.addEventListener("message", ev => {
 		outputTextIndex = outputTextIndex > 4 ? 4 : outputTextIndex;
 
 		document.getElementById('output_terminal').value = text;
-		console.log("OUTPUT BOX in main");
 
 		break;
 	}
-}
-  
+}  
 
 });
 
@@ -176,12 +142,8 @@ function setDefaultCyStyle(cy) {
 	      style: {
 	        'width': 3,
 	        'line-color': 'hsl(90, 100%, 5%)',
-//	        'target-arrow-color': '#ccc',
-//			'label': 'data(propagation_delay)',
-			//	        'target-arrow-shape': 'triangle',
 	        'curve-style': 'unbundled-bezier',
 			'control-point-distances': '-20 20 -20',
-//			'control-point-weights': '0.25 0.5 0.75'
 	      }
 	    }
 	  ]);
@@ -212,19 +174,9 @@ function setDefaultCyStyle(cy) {
 				}
 			}
 		);
-
- /* 
-	cy.edges()
-		.style({
-			'line-color': '#ccc',
-			'width': 5,
-		});*/
-		
 }
 
 function displayNodeAddressMap(msg) {
-//	let total_streams = tmp['total_streams'];
-//	setDefaultCyStyle(cy);
 	currentTab.refreshCyStyle();
 
 	for (const node_id of Object.keys(msg.address_map)) {
@@ -241,11 +193,9 @@ function displayNodeAddressMap(msg) {
 	}
 	let src = cy.$id(msg.src);
 	let srcLuminance = (5+20*asympthoticScale(Object.keys(msg.address_map).length, 1.2, 100-5, 50)).toString();
-//	let srcColor = 'hsl(300, 100%, ' + srcLuminance + '%)';	
-//	let srcColor = blueviolet;	
 	src.style({
-		'background-color': 'blueviolet',
-		'color': 'blueviolet',
+		'background-color': 'hsl(332, 87%, 50%)',
+		'color': 'hsl(332, 87%, 50%)',
 		'label': msg.src,
 	});
 
@@ -255,7 +205,6 @@ function displayNodeAddressMap(msg) {
 function asympthoticScale(value, powBase, limit, scale) {
 	return limit*(1 - Math.pow(powBase, -value/scale))
 }
-
 
 $(function() {
 	setupTabFlow = new SetupTabFlow();
@@ -267,11 +216,6 @@ $(function() {
 	setupTabFlow.init();
 
 	setCurrentTab(setupTabFlow.id());
-
-
-//	document.getElementById("setup").click(); 
-//	$("#setupTabButton").on("click", "setupTab", setCurrentTab);
-//	$("#runTabButton").on("click", null, setCurrentTab("runTab"));
 
 	document.querySelector("#setupTabButton").addEventListener("click", 
 		ev => {
@@ -292,6 +236,8 @@ $(function() {
 	document.querySelector("#nodeLoopCyclesTickDelay").addEventListener("change", 
 		ev => {
 			nodeLoopCyclesTickDelay = ev.target.value;
+			document.getElementById("nodeLoopCyclesTickDelayLabel").innerHTML 
+				= "Delay between cycles in node event loops (ms): " + nodeLoopCyclesTickDelay;
 			worker.postMessage({cmd: 'setMWLoopCycleTickDelay', 
 				params: {'nodeLoopCyclesTickDelay': nodeLoopCyclesTickDelay}
 			});
@@ -300,10 +246,19 @@ $(function() {
 
 	document.querySelector("#sessionsLimit").addEventListener("change", 
 		ev => {
-			sessionsLimit = ev.target.value;
+			console.log("changed");
+			let sessionsLimit = ev.target.value;
+			document.getElementById("sessionsLimitLabel").innerHTML 
+				= "Session number limit: " + sessionsLimit;
 			worker.postMessage({cmd: 'setMWMaxRunningSessions', 
 				params: {'sessionsLimit': sessionsLimit}
 			});
+		}
+	);
+	document.querySelector("#addressMapSeeds").addEventListener("change", 
+		ev => {
+			document.getElementById("addressMapSeedsLabel").innerHTML 
+				= "Address Map Seeds: " + ev.target.value;
 		}
 	);
 
@@ -331,6 +286,7 @@ function SetupTabFlow() {
 
 	const instanceLoaded = (mwJSON, state) => { 
 		document.getElementById("output_terminal").value = "";
+		document.getElementById("comments").innerHTML = "";	
 
 		let mw;
 		try {
@@ -392,8 +348,15 @@ SetupTabFlow.prototype.loadInstance = function (mwJSON) {
 }
 
 SetupTabFlow.prototype.onEnter = function () {
+	document.getElementById("setupTab").style.display = "block";
+
 	document.getElementById("loops_params_controls").style.display = "none";
 	document.getElementById("stats_bars").style.display = "none";
+//	document.getElementById("output_terminal").style.display = "none";
+	document.getElementById("comments").innerHTML = "Enter parameters of network to be created";	
+}
+SetupTabFlow.prototype.onLeave = function () {
+	document.getElementById("setupTab").style.display = "none";
 }
 
 SetupTabFlow.prototype.disable = function() {
@@ -408,7 +371,6 @@ RandomRunTabFlow.runRandomLoopSignalId = 103;
 RandomRunTabFlow.stopCurrentOpSignalId = 110;
 RandomRunTabFlow.currentOpStoppedSignalId = 111;
 RandomRunTabFlow.cyNodeTapSignalId = 105;
-//RandomRunTabFlow.toggleNodeConnectionId = 120;
 
 function RandomRunTabFlow() {
 	var currentCyStyle;
@@ -422,7 +384,10 @@ function RandomRunTabFlow() {
 	addressMapButton.addEventListener("click", 
 	() => {
 		let seeds = document.querySelector("#addressMapSeeds").value;
-		let params = {autoStopMs: 3000, seeds};
+		let params = {
+			autoStopMs: Math.max(maxLineDelay*6, 500), 
+			seeds, 
+			expiresMs: maxLineDelay*4};
 		this.warmUp(params);
 	});
 
@@ -434,9 +399,6 @@ function RandomRunTabFlow() {
 	}
 
 	const currentOpStopped = (pollSample, state) => { 
-		console.log("RandomRunTabFlow.prototype.currentOpStopped");
-
-//		drawDynStats(0, overallTraffic, 0, {}, 0);
 		if (pollSample !== undefined) {
 			onPollTrafficSample(this, pollSample, state);
 			onPollTrafficSample(this, pollSample, state);
@@ -457,27 +419,17 @@ function RandomRunTabFlow() {
 	}
 
 	const startWarmingUp = (params, state) => { 
-/*		console.log("startWarmingUp, params: ", params);
-		document.getElementById("addressMapButton").disabled = true;
-		document.getElementById("startRandomLoopRun").disabled = true;
-		document.getElementById("stopCurrentOperationButton").disabled = false;
-*/
 
+		document.getElementById("comments").innerHTML = "Running address map recognition sequence...";	
 		setTabExclusiveAccess(this);
 		worker.postMessage({cmd: "addressMap", params})
 	}
 
 	const runningRandomLoop = (_, state) => { 
-		console.log("runningRandomLoop");
-
-//		setDefaultCyStyle(cy);
-//		document.body.style.cursor = 'arrow';
 
 		addressMapButton.disabled = true;
 		startRandomLoopRunButton.disabled = true;
 		stopCurrentOperationButton.disabled = false;
-	//	document.getElementById("sessionsLimit").style.display = "block";
-	//	document.getElementById("nodeLoopCyclesTickDelay").style.display = "block";
 		setTabExclusiveAccess(this);	
 
 		let nodeLoopCyclesTickDelay = document.querySelector("#nodeLoopCyclesTickDelay").value;
@@ -491,39 +443,43 @@ function RandomRunTabFlow() {
 	}
 	
 	const cyNodeTap = (nodeId, state) => { 
-//		console.log(appFlow.currentTab().nodeTapCommand + ' ' + nodeId);
-
 		worker.postMessage( {cmd: state.nodeTapCommand,  node_id: nodeId } );
-//		worker.postMessage( {cmd: currentMode["nodeTapCommand"],  node_id: nodeId } );
 	}
 
 	this.fsm = new FSM();
 	let fsm = this.fsm;
 
 	fsm.init( {
-//		initState: { id: 10, description:"before mockwork loaded."},	
-//		instanceReadyState: { id: 20, description: "instance ready."},	
 		warmingUpState: { 
 			id: 30, 
 			op: 'addressMap', 
 			description: "warming up.",
 			nodeTapCommand: 'displayNodeAddressMap',
-//			cyNodeStyles: [],
+			exit: () => {
+				document.getElementById("comments").innerHTML += "done";
+			}
 		},	
 		waitingForFutherCommandState: { 
 			id: 33,
 			nodeTapCommand: 'displayNodeAddressMap', 
 			description: "warmed up.",
+			on: () => {
+				document.getElementById("comments").innerHTML = "Tap a node to view its address map";
+			},
 		},	
 		
 		runningRandomLoopState: { 
 			id: 40,
 			op: 'randomRun',
-			nodeTapCommand: 'toggleNodeConnection',  
-//			overall_outgoing: 0,
-//			overall_incoming: 0,
+			nodeTapCommand: 'toggleNodeConnection', 
+			on: () => {
+				document.getElementById("comments").innerHTML = "Tap a node to toggle its connection";
+			},
+
+			exit: () => {
+				document.getElementById("comments").innerHTML = "";
+			}
 		},	
-//failure: { id: 55, description: "state transition failure.", on: onFailure},	
 	});
 
 	fsm.awaiting.nodeTapCommand = 'displayNodeAddressMap';
@@ -565,11 +521,25 @@ RandomRunTabFlow.prototype.reset = function () {
 }
 
 RandomRunTabFlow.prototype.onEnter = function () {
+	document.getElementById("runTab").style.display = "block";
+
 	document.getElementById("loops_params_controls").style.display = "block";
 	document.getElementById("stats_bars").style.display = "block";
-	document.getElementById("sessionsLimit").style.display = "block";
-}
+	let sessionsLimit = document.getElementById("sessionsLimit").value;
+	document.getElementById("sessionsLimitLabel").innerHTML 
+		= "Session number limit: " + sessionsLimit;
 
+	nodeLoopCyclesTickDelay = document.getElementById("nodeLoopCyclesTickDelay").value;
+	document.getElementById("nodeLoopCyclesTickDelayLabel").innerHTML 
+		= "Delay between cycles in node event loops (ms): " + nodeLoopCyclesTickDelay;
+	document.getElementById("sessionsLimit").style.display = "block";
+	document.getElementById("sessionsLimitLabel").style.display = "block";
+//	document.getElementById("output_terminal").style.display = "block";
+	document.getElementById("comments").innerHTML = "Tap on WarmUp and wait until address map is built";	
+}
+RandomRunTabFlow.prototype.onLeave = function () {
+	document.getElementById("runTab").style.display = "none";
+}
 RandomRunTabFlow.prototype.runRandomLoop = function () {
 	this.fsm.inputSignal({id: RandomRunTabFlow.runRandomLoopSignalId})
 }
@@ -624,7 +594,6 @@ RandomRunTabFlow.prototype.toggleDisplayNodeMapMode = function(cy) {
 RandomRunTabFlow.prototype.setCyNodeStyles = function(state) {
 	let cyNodeStyles = this.currentCyStyle;
 	Object.keys(cyNodeStyles).forEach( (nodeId) => {
-//		Object.keys(cyNodeStyles).forEach( (nodeId) => {
 		if (cy.$id(nodeId).data()['connected']) {
 			cy.$id(nodeId)
 				.style( { 
@@ -663,7 +632,7 @@ function PeerChannelTestFlow() {
 	var currentCyStyle;
 
 	stopPeerOperationButton.addEventListener("click", () => {
-		console.log("stopPeerOperationButton clicked");
+//		console.log("stopPeerOperationButton clicked");
 		this.stopCurrentOp();
 	});
 
@@ -687,8 +656,8 @@ function PeerChannelTestFlow() {
 		} else {
 			
 			cy.$id(dest).style({
-				'background-color': 'magenta',
-				'color': 'magenta',
+				'background-color': 'hsl(209, 96%, 46%)',
+				'color': 'hsl(209, 96%, 46%)',
 				'label': dest,
 			  });
 
@@ -709,6 +678,11 @@ function PeerChannelTestFlow() {
 		let nodeLabel = nodeId;
 		if (state.nodeTapped) {
 			if (state.nodeTapped != nodeId) {
+				cy.$id(nodeId).style({
+					'background-color': 'hsl(209, 96%, 46%)',
+					'color': 'hsl(209, 96%, 46%)',
+					'label': nodeLabel,
+				});
 				worker.postMessage({cmd: 'injectPeerTest', 
 					src: state.nodeTapped,
 					dest: nodeId
@@ -719,19 +693,21 @@ function PeerChannelTestFlow() {
 
 			state.nodeTapped = undefined;
 		}
-		else state.nodeTapped = nodeId;
+		else {
+			state.nodeTapped = nodeId;
 
-		cy.$id(nodeId).style({
-			'background-color': 'magenta',
-			'color': 'magenta',
-			'label': nodeLabel,
-		  });
+			cy.$id(nodeId).style({
+				'background-color': 'magenta',
+				'color': 'magenta',
+				'label': nodeLabel,
+			});
+		}
 
 		return nodeId;
 	}
 
 	const stoppingCurrentOp = (op, state) => { 
-		console.log("PeerChannelTestFlow.prototype.stoppingCurrentOperation");
+//		console.log("PeerChannelTestFlow.prototype.stoppingCurrentOperation");
 		worker.postMessage({cmd: "stopCurrentOperation", op: state.op});
 
 //		toggleDisplayNodeMapMode(cy);
@@ -743,7 +719,7 @@ function PeerChannelTestFlow() {
 	}
 
 	const currentOpStopped = (pollSample, state) => { 
-		console.log("PeerChannelTestFlow.prototype.currentOpStopped");
+//		console.log("PeerChannelTestFlow.prototype.currentOpStopped");
 
 //		drawDynStats(0, overallTraffic, 0, {}, 0);
 	if (pollSample !== undefined) {
@@ -804,13 +780,6 @@ function PeerChannelTestFlow() {
 		.chain(PeerChannelTestFlow.leaveSignalId, fsm.awaiting, onLeave)
 	fsm.runningState
 		.chain(PeerChannelTestFlow.currentOpStoppedSignalId, fsm.awaiting, currentOpStopped)
-/*
-	.chain(PeerChannelTestFlow.cyNodeTapSignalId, fsm.runningWithNodeTappedState, nodeTappedWhenRunning)
-		.chain(PeerChannelTestFlow.pollSampleSignalId, fsm.runningWithNodeTappedState, pollSample)
-		.chain(PeerChannelTestFlow.stopCurrentOpSignalId, fsm.runningState, stoppingCurrentOp)
-	fsm.runningWithNodeTappedState
-		.chain(PeerChannelTestFlow.cyNodeTapSignalId, fsm.runningState, nodeTappedWhenRunning)
-*/
 
 	fsm.run();
 }
@@ -841,14 +810,19 @@ PeerChannelTestFlow.prototype.currentOpStopped = function(pollSample) {
 }
 
 PeerChannelTestFlow.prototype.onLeave = function() {
+	document.getElementById("peerChannelRunTab").style.display = "none";
+
 	this.fsm.inputSignal({id: PeerChannelTestFlow.leaveSignalId})
 }
 
 PeerChannelTestFlow.prototype.onEnter = function() {
+	document.getElementById("peerChannelRunTab").style.display = "block";
+
 	document.getElementById("loops_params_controls").style.display = "block";
 	document.getElementById("sessionsLimit").style.display = "none";
 	document.getElementById("sessionsLimitLabel").style.display = "none";
 	document.getElementById("stats_bars").style.display = "block";
+//	document.getElementById("output_terminal").style.display = "block";
 	document.getElementById("comments").innerHTML = "Tap on a pair of nodes to run transfers";	
 
 	sessionsLimitSlider.disabled = false;
@@ -876,7 +850,8 @@ PeerChannelTestFlow.prototype.setCyNodeStyles = function(state) {
 			cy.$id(nodeId)
 				.style( { 
 					'background-color': 'red',
-//					'label': '',
+					'width': 10,
+					'height': 10,
 				} );
 		}
 		if (!state || !state.withLabels)
@@ -947,15 +922,21 @@ function resetDynStats() {
 	
 	let sessionsRunningStatsBar = document.getElementById('sessionsRunningStatsBar');
 	sessionsRunningStatsBar.style.width = '0%';
-	sessionsRunningStatsBar.innerHTML = "0";
+//	sessionsRunningStatsBar.innerHTML = "0";
+	document.getElementById("sessionsRunningStatsBarLabel").innerHTML 
+		= "sessions: 0";
 
 	let currentTrafficStatsBar = document.getElementById('currentTrafficStatsBar');
 	let overallTrafficStatsBar = document.getElementById('overallTrafficStatsBar');
 	currentTrafficStatsBar.style.width = "0%";
-	currentTrafficStatsBar.innerHTML = "0";
+//	currentTrafficStatsBar.innerHTML = "0";
+	document.getElementById("currentTrafficStatsBarLabel").innerHTML 
+		= "traffic: 0";
 	
 	overallTrafficStatsBar.style.width = "0%";
-	overallTrafficStatsBar.innerHTML = "0";
+//	overallTrafficStatsBar.innerHTML = "0";
+	document.getElementById("overallTrafficStatsBarLabel").innerHTML 
+		= "overall traffic: 0";
 }
 
 function drawDynStats(
@@ -980,7 +961,9 @@ function drawDynStats(
 	let w = asympthoticScale(sessions_running, 1.2, widthLimit, 1);
 	let sessionsRunningStatsBar = document.getElementById('sessionsRunningStatsBar');
 	sessionsRunningStatsBar.style.width = Math.floor(w).toString() + '%';
-	sessionsRunningStatsBar.innerHTML = sessions_running.toString();
+	document.getElementById("sessionsRunningStatsBarLabel").innerHTML 
+		= "sessions: " + sessions_running.toString();
+//	sessionsRunningStatsBar.innerHTML = sessions_running.toString();
 
 	let currentTrafficStatsBar = document.getElementById('currentTrafficStatsBar');
 	let overallTrafficStatsBar = document.getElementById('overallTrafficStatsBar');
@@ -988,11 +971,16 @@ function drawDynStats(
 	
 	w = asympthoticScale(total_current_traffic, 1.2, widthLimit, 50);
 	currentTrafficStatsBar.style.width = Math.floor(w).toString() + "%";
-	currentTrafficStatsBar.innerHTML = total_current_traffic.toString();
+	document.getElementById("currentTrafficStatsBarLabel").innerHTML 
+		= "traffic: " +  total_current_traffic.toString();
+
+	//	currentTrafficStatsBar.innerHTML = total_current_traffic.toString();
 	
 	w = asympthoticScale(overallTraffic, 1.01, widthLimit, 5);
 	overallTrafficStatsBar.style.width = Math.floor(w).toString() + "%";
-	overallTrafficStatsBar.innerHTML = overall_traffic.toString() + "+" + remaining_scheduled.toString();
+	document.getElementById("overallTrafficStatsBarLabel").innerHTML 
+		= "overall traffic: " +  overall_traffic.toString();
+//	overallTrafficStatsBar.innerHTML = overall_traffic.toString();
 
 //	peerCurrentTrafficStatsBar.style.width = Math.floor(w).toString() + "%";
 //	peerCurrentTrafficStatsBar.innerHTML = total_current_traffic.toString();
@@ -1039,7 +1027,11 @@ function onPollAddressMapSample(tabFlow, pollSample, state) {
 			nodeColor = 'red';
 			nodeSize = 5;
 		}
-		tabFlow.currentCyStyle[node_id] = {
+		randomRunTabFlow.currentCyStyle[node_id] = {
+			color: nodeColor,
+			size: nodeSize
+		}
+		peerChannelTestFlow.currentCyStyle[node_id] = {
 			color: nodeColor,
 			size: nodeSize
 		}

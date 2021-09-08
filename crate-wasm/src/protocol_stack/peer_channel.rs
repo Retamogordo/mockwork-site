@@ -96,10 +96,8 @@ impl PeerChannel {
         dest_line_id: LineId,
         shared_alloc: &mut SharedPipeAlloc<LayerPipeItem>
     ) {
-        let line_items: Option<Vec<LayerPipeItem>>;
-
         if  self.dup_channel_req {
-            log::warn!("\t\t\tDUPLICATE CHANNEL REQUEST AT {}, token {}", self.node_addr, service_token);
+            log::debug!("\t\t\tDUPLICATE CHANNEL REQUEST AT {}, token {}", self.node_addr, service_token);
             return;
         }
         self.dup_channel_req = true;
@@ -131,7 +129,7 @@ impl PeerChannel {
 //            shared_alloc.push(event.into());
         } else { 
             if let Some(other_joint_end) = self.channel_joint.other(line_id) {
-                log::info!("{} dropping {}", self.node_addr, service_token);
+                log::debug!("{} dropping {}", self.node_addr, service_token);
                 shared_alloc.replace_propagate_current(
                     NodeCommand(*other_joint_end,
                     SecondLayerCommand::DropService(service_token)).into()
@@ -140,7 +138,7 @@ impl PeerChannel {
         }
     }
 
-    fn keep_alive(&self, service_token: ServiceToken, 
+    fn keep_alive(&self, 
         line_id: LineId,
         shared_alloc: &mut SharedPipeAlloc<LayerPipeItem>) {
         if self.is_origin() || self.is_dest() {
@@ -358,7 +356,7 @@ impl EventTarget<LayerPipeItem> for PeerChannelMonitor {
             SecondLayerEvent::FirstLayerChannelKeptAlive(service_token) => {
                 let dest_line_id = *line_id;
                 if let Some(channel) = self.active_channels.get(&service_token) {                                             
-                    channel.keep_alive(*service_token, dest_line_id, shared_alloc);
+                    channel.keep_alive(dest_line_id, shared_alloc);
                 }
             }
             
@@ -374,7 +372,6 @@ impl EventTarget<LayerPipeItem> for PeerChannelMonitor {
                         self.on_channel_request(*service_token, *dest, shared_alloc);
                     },
                     SecondLayerCommand::CheckExpiredTokens => {
-                        let addr = self.node_addr;
                         // only check for waiting token, as active tokens are controlled
                         // by first layer channel monitor
                         self.waiting_channels.retain(|token, _| {

@@ -203,11 +203,4 @@ impl<T: Item + Display> SharedPipeAlloc<T> {
 			self.push(item);
 		}
 	}
-
-/*	pub fn top_items_mut(&mut self) -> &mut VecDeque<(T, bool)> {
-		&mut self.top_items
-	}
-	pub fn bottom_items_mut(&mut self) -> &mut VecDeque<(T, bool)> {
-		&mut self.bottom_items
-	}*/
 }
