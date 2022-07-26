@@ -6,6 +6,8 @@
  Nodes run a protocol stack that facilitate exchange of data between nodes.
  The code runs on WebAssembly which is loaded to a single Web Worker.
  
+ ![Image](image.png)
+ 
  ### Building and running locally
  - clone the repo
  - in /www folder run npm install
