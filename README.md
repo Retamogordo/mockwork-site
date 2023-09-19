@@ -10,10 +10,10 @@ The code is designed to run on WebAssembly, which is then loaded onto a single J
  
  ### Building and running locally
  - clone the repo
- - in /www folder run npm install
- - run npm run start (or npm run build to bundle to www/dist)
- - change dir to /crate-wasm and run wasm-pack build 
- - access in a browser from localhost:8080
+ - in ```/www``` folder run ```npm install```
+ - run ```npm run start``` (or ```npm run build``` to bundle to ```www/dist```)
+ - change dir to ```/crate-wasm``` and run ```wasm-pack build``` 
+ - access in a browser from ```localhost:8080```
 
  ### Disclaimer
 This program was created as a part of my endeavor to familiarize myself with the Rust programming language. 
