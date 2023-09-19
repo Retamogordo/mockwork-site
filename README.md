@@ -2,9 +2,9 @@
  ## Asynchronous Network Simulator.
  [Run Demo](https://retamogordo.github.io/mockwork-site)
  ### Introduction
- This program presents a simulator of nodes interconnected by physical media.
- Nodes run a protocol stack that facilitate exchange of data between nodes.
- The code runs on WebAssembly which is loaded to a single Web Worker.
+This program offers a simulation of nodes connected via physical media. 
+These nodes operate with a protocol stack that enables the exchange of data among them. 
+The code is designed to run on WebAssembly, which is then loaded onto a single JS Web Worker.
  
  ![Image](image.png)
  
@@ -16,56 +16,32 @@
  - access in a browser from localhost:8080
 
  ### Disclaimer
- This program was written as a part of my effort to learn Rust language.
- The design of this network is not based on any existing real network implementation.
- All terms used here like socket, peer, stream, protocol etc etc should be
- taken in their broad and vague sense.
- Although somewhat complex, this program does not pursuit any practical utility but eat up your CPU when
- running :)
+This program was created as a part of my endeavor to familiarize myself with the Rust programming language. 
+
+The architecture of this network is not derived from any pre-existing real-world network implementation. 
+All the terminology employed here, such as socket, peer, stream, protocol, and so on, should be interpreted in a broad and abstract manner.
+
+Although it may appear somewhat intricate, this program does not aim to serve any practical purpose but rather consumes CPU resources when executed. :)
  
  ### Brief introduction to functioning
  
- Nodes are connected by duplex lines which are modeled by only a couple of
- parameters: propagation delay and noise level.
- 
- The bandwidth is limited naturally by JS event loop :)
- 
- The line delay is simulated by a timer delay.
- 
- Each node runs its own event loop (two loops, more precisely) in which it listens to Events from line
- and Commands from frontend.
- 
- These items - Commands and Events are passed through a duplex pipe where
- protocols reside.
- 
- Protocols are entities that receive, recognize, process relevant commands and events
- and, possibly, emit futher items until they are consumed on corresponding
- endpoint of the pipe.
- 
- For now protocols are layered into three layers: "Physical", "First" and "Second".
- Rusts type system favors natural firewalling of pipe items in such a way that
- each item must be expicitly converted to the adjacent layer item in order
- to be eligible to propagate.
- 
- Each protocol has a header which wraps a message to be transmitted, on the other
- line endpoint the headers are stripped off as long as the message bubbles up in 
- the protocol pipe.
- 
- At first nodes are unaware of their mates, the only thing they can do 
- is to send a message online using physical layer transmit.
- There is a protocol that broadcasts requests for address map building upon
- receiving acks from other nodes.
- There is a protocol for channel establishing on a line between two adjacent
- nodes, and this channel can serve as a joint for a longer higher layer channel
- between two arbitrary nodes.
- On a "frontend" level a concept of stream is introduced (does not implement
- a formal Rusts stream interface). 
- Each physical line can serve for data transmitting over multiple logical
- streams.
- Streams lazily expire so they can be garbage collected after line failure.
- The protocol stack is somehow scalable, one can implement a new protocol
- introducing events and commands along with relevant business logic and hooking
- it to the protocol stack.
+ Nodes are linked by duplex lines, which are represented by only a few parameters: propagation delay and noise level.
+
+The bandwidth is naturally constrained by the JS event loop.
+
+The line delay is emulated using a timer delay.
+
+Each node operates its own event loop, specifically two loops, where it monitors both Events from the line and Commands from the frontend.
+
+These elements, Commands and Events, are conveyed through a duplex pipe that houses various protocols.
+
+Protocols are entities responsible for receiving, identifying, processing pertinent commands and events, and potentially generating additional items until they are consumed at the corresponding endpoint of the pipe.
+
+Currently, protocols are organized into three layers: "Physical," "First," and "Second." Rust's type system facilitates a natural firewalling of pipe items, requiring each item to be explicitly converted to the adjacent layer item to be eligible for propagation.
+
+Each protocol includes a header that encapsulates a message to be transmitted. On the opposite line endpoint, headers are removed as the message progresses through the protocol pipe.
+
+Initially, nodes lack awareness of their counterparts. Their primary capability is to send messages online using the physical layer for transmission. There exists a protocol that broadcasts requests to build an address map upon receiving acknowledgments from other nodes. Another protocol is used for establishing channels between adjacent nodes, and these channels can serve as junctions for longer higher-layer channels between any two nodes. On the "frontend" level, the concept of a stream is introduced (though it does not implement a formal Rust stream interface). Each physical line can be used for transmitting data across multiple logical streams. Streams are designed to expire lazily, allowing them to be garbage collected after line failures. The protocol stack is designed to be scalable, enabling the implementation of new protocols with associated events, commands, and relevant business logic, which can then be integrated into the existing protocol stack.
  
  ### User Interface
  is written in plain Javascript and utilizes [Cytoscape](https://cytoscape.org) for network visualization.
@@ -75,26 +51,18 @@
  to postmessage it to UI thread and present some indication on network activity.
 
  ### Technical Issues
- Line delay are simulated by a standard (asynchronously awaited) delays which
- present a small but constant time drift which, by cumulative effect leads to a
- significant time divergence very quickly. 
- So there is a scheduling mechanism aiming to solve this issue, which usually
- works fine but in theory (and in practice) causes some messages to be
- sent before time.
- This is a CPU greedy program, after all there are a plenty of event loops
- on top of JS runtime, and while it is UI responsive, it turns to be tricky to achieve
- internal responsiveness ( I consider I failed to get to a satisfactory solution).
- I suspect my protocol implementation is far from being optimal and represents
- a serious bottleneck for the whole story.
+Line delays are emulated through standard (asynchronously awaited) delays, which introduce a minor yet consistent time deviation. This cumulative effect results in a significant time divergence rather quickly.
+
+To address this issue, a scheduling mechanism is in place, which typically performs well. 
+However, in theory (and occasionally in practice), it may cause some messages to be sent ahead of schedule.
+
+This program is CPU-intensive, as it involves numerous event loops on top of the JS runtime. While it maintains UI responsiveness, achieving internal responsiveness has proven to be challenging (I believe I fell short of finding a satisfactory solution). 
+This implementation is far from optimal and acts as a significant bottleneck in the overall system.
  
  ### Browser compatibility
  I used Firefox 89.0 on Linux while developing and tested it a bit with
  Chromium 93
- 
- ### Deployment Problems
- I lack knowledge regarding deployment process, after two days of
- trying to adopt a foreign very simple travis.yml I abandoned it 
- for deploying it just brutally.
+
  
  ### Acknowledgements
  to Victor Gavrish for his 
