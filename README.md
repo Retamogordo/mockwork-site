@@ -42,7 +42,19 @@ Currently, protocols are organized into three layers: "Physical," "First," and "
 Each protocol includes a header that encapsulates a message to be transmitted. On the opposite line endpoint, headers are removed as the message progresses through the protocol pipe.
 
 Initially, nodes lack awareness of their counterparts. Their primary capability is to send messages online using the physical layer for transmission. There exists a protocol that broadcasts requests to build an address map upon receiving acknowledgments from other nodes. Another protocol is used for establishing channels between adjacent nodes, and these channels can serve as junctions for longer higher-layer channels between any two nodes. On the "frontend" level, the concept of a stream is introduced (though it does not implement a formal Rust stream interface). Each physical line can be used for transmitting data across multiple logical streams. Streams are designed to expire lazily, allowing them to be garbage collected after line failures. The protocol stack is designed to be scalable, enabling the implementation of new protocols with associated events, commands, and relevant business logic, which can then be integrated into the existing protocol stack.
- 
+```
+          BACKEND                                              BACKEND
+  event   command                                              command  event
+    ↑        |                                                    |       ↑
+    |        |     ...                                    ...     |       |
+    |  cmd-  |   |layer2| <--addr HT, channels, etc-->  |layer2|  | cmd-  |
+    |  event |   --------                               --------  | event |
+    |  pipe  |   |layer1| <---addr xchg, broadcast--->  |layer1|  | pipe  |
+    |        |   --------                               --------  |       |
+    |        ↓   |layer0| <-----transmit bytes------->  |layer0|  ↓       |
+    |                                                                     |
+    ------------- NODE 1                                 NODE 2 ----------- 
+ ```
  ### User Interface
  is written in plain Javascript and utilizes [Cytoscape](https://cytoscape.org) for network visualization.
  WebAssemly code runs network simulation event loops in asynchronous fashion
