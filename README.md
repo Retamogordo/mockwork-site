@@ -18,7 +18,7 @@ The code is designed to run on WebAssembly, which is then loaded onto a single J
  ### Disclaimer
 This program was created as a part of my endeavor to familiarize myself with the Rust programming language. 
 
-The architecture of this network is not derived from any pre-existing real-world network implementation. 
+The architecture of this network is not derived from any existing real-world network implementation. 
 All the terminology employed here, such as socket, peer, stream, protocol, and so on, should be interpreted in a broad and abstract manner.
 
 Although it may appear somewhat intricate, this program does not aim to serve any practical purpose but rather consumes CPU resources when executed. :)
